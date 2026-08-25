@@ -1,0 +1,27 @@
+      // [clipboard-images] 粘贴图片 → 加入原生多模态草稿(模型直接看图)
+      react.useEffect(() => {
+        const onPaste = (e) => {
+          try {
+            const items = (e.clipboardData && e.clipboardData.items) || []
+            const imgs = []
+            for (const it of items) {
+              if (it.kind === 'file' && it.type.indexOf('image/') === 0) {
+                const f = it.getAsFile()
+                if (f) imgs.push(f)
+              }
+            }
+            if (imgs.length === 0) return
+            e.preventDefault()
+            const cur = stateRef.current.props
+            const cv = cur.conversation
+            const ia = cur.inputActions
+            if (cv && cv.createDraftImages && ia && ia.addImages) {
+              const atts = cv.createDraftImages(imgs)
+              ia.addImages(atts.map(function (x) { return x.id; }))
+              setMsg('✓ 已粘贴 ' + imgs.length + ' 张图片')
+            }
+          } catch (err) { /* 忽略 */ }
+        }
+        document.addEventListener('paste', onPaste)
+        return () => document.removeEventListener('paste', onPaste)
+      }, [])
