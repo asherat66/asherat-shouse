@@ -101,4 +101,17 @@ contextBridge.exposeInMainWorld('dshDesktop', {
   drainDroppedImages() {
     const r = imageQueue; imageQueue = []; return r;
   },
+  // 扩展: 按本地路径读取图片为 base64(供发送前路径文本识别)
+  readLocalImage(p) {
+    try {
+      if (!p || typeof p !== 'string') return null
+      const clean = p.replace(/^["']+|["']+$/g, '').trim()
+      if (!isImageFile(clean)) return null
+      const st = fs.statSync(clean)
+      if (!st.isFile() || st.size > MAX_IMG_BYTES) return null
+      const buf = fs.readFileSync(clean)
+      const mime = 'image/' + path.extname(clean).slice(1).toLowerCase().replace('jpg', 'jpeg')
+      return { name: path.basename(clean), base64: buf.toString('base64'), mime, bytes: buf.length }
+    } catch { return null }
+  },
 });

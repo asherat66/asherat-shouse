@@ -8,6 +8,39 @@
         // [url-images] 草稿中的图片链接 → 下载并加入原生草稿, 再继续发送流程
         const draft = (input && input.draft) || ''
         const urlM = draft.match(/https?:\/\/[^\s)一-鿿]+?\.(?:png|jpe?g|gif|webp|bmp|avif)(?:\?[^\s)]*)?/gi)
+        // [path-images] 本地路径文本(如 C:\Users\z\a.jpg)
+        const localPathM = (draft || '').match(/[A-Za-z]:[\\/][^\s"一-鿿]+?\.(?:png|jpe?g|gif|webp|bmp|avif)/gi)
+        const hasLocalImg = localPathM && localPathM.length > 0 && typeof window !== 'undefined' && window.dshDesktop && typeof window.dshDesktop.readLocalImage === 'function'
+        if (hasLocalImg) {
+          if (e && e.preventDefault) e.preventDefault()
+          if (e && e.stopPropagation) e.stopPropagation()
+          if (e && e.stopImmediatePropagation) e.stopImmediatePropagation()
+          setMsg('正在读取本地图片…')
+          Promise.all(localPathM.slice(0, 10).map(async (u) => {
+            try {
+              const j = window.dshDesktop.readLocalImage(u)
+              if (!j) throw new Error('unreadable')
+              const bin = atob(j.base64)
+              const bytes = new Uint8Array(bin.length)
+              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+              return new File([bytes], j.name, { type: j.mime })
+            } catch (err) { return null }
+          })).then((files2) => {
+            const ok = files2.filter(Boolean)
+            if (ok.length > 0) addImageFilesToDraft(ok)
+            modelSupportsImage().then((multi) => {
+              if (multi) {
+                setMsg('当前模型支持图片：直接发送即可')
+                try { inputActions.submit() } catch (err) { /* 忽略 */ }
+                return
+              }
+              doConvertAndSend(conversation ? conversation.draftImages((input && input.imageIds) || []) : [], input, inputActions, conversation, (input && input.imageIds) || [])
+            }).catch(() => {
+              try { inputActions.submit() } catch (err) { /* 忽略 */ }
+            })
+          })
+          return
+        }
         if (urlM && urlM.length > 0) {
           if (e && e.preventDefault) e.preventDefault()
           if (e && e.stopPropagation) e.stopPropagation()

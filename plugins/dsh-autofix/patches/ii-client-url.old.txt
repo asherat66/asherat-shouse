@@ -5,6 +5,48 @@
         const inputActions = p.inputActions
         const conversation = p.conversation
         const ids = (input && input.imageIds) || []
+        // [url-images] 草稿中的图片链接 → 下载并加入原生草稿, 再继续发送流程
+        const draft = (input && input.draft) || ''
+        const urlM = draft.match(/https?:\/\/[^\s)一-鿿]+?\.(?:png|jpe?g|gif|webp|bmp|avif)(?:\?[^\s)]*)?/gi)
+        if (urlM && urlM.length > 0) {
+          if (e && e.preventDefault) e.preventDefault()
+          if (e && e.stopPropagation) e.stopPropagation()
+          if (e && e.stopImmediatePropagation) e.stopImmediatePropagation()
+          setMsg('正在下载图片链接…')
+          Promise.all(urlM.map(async (u) => {
+            try {
+              const r = await fetch('/plugins/mmv/from-url', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: u }),
+              })
+              const j = await r.json()
+              if (!j.ok) throw new Error(j.error || 'download failed')
+              const bin = atob(j.base64)
+              const bytes = new Uint8Array(bin.length)
+              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+              const file = new File([bytes], j.name, { type: j.mime })
+              if (conversation && typeof conversation.createDraftImages === 'function') {
+                const atts = conversation.createDraftImages([file])
+                const inp = conversation.input && conversation.input.for ? conversation.input.for(p.conversation ? undefined : undefined) : null
+                // 用 inputActions 添加(与 dsh 原生一致)
+                const guard = inputActions || null
+                if (guard && typeof guard.addImages === 'function') guard.addImages(atts.map((x) => x.id))
+              }
+            } catch (err) { /* 单张失败继续 */ }
+          })).then(() => {
+            modelSupportsImage().then((multi) => {
+              if (multi) {
+                setMsg('当前模型支持图片：直接发送即可')
+                try { inputActions.submit() } catch (err) { /* 忽略 */ }
+                return
+              }
+              doConvertAndSend(conversation ? conversation.draftImages((input && input.imageIds) || []) : [], input, inputActions, conversation, (input && input.imageIds) || [])
+            }).catch(() => {
+              try { inputActions.submit() } catch (err) { /* 忽略 */ }
+            })
+          })
+          return
+        }
         if (ids.length === 0) return
         const attachments = conversation ? conversation.draftImages(ids) : []
         if (attachments.length === 0) return
