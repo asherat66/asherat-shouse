@@ -10,7 +10,8 @@
     "start": "electron .",
     "assemble": "node scripts/assemble-resources.cjs",
     "pack": "node scripts/assemble-resources.cjs && electron-builder --win nsis --config electron-builder.yml",
-    "pack:dir": "electron-builder --win dir --config electron-builder.yml"
+    "pack:dir": "electron-builder --win dir --config electron-builder.yml",
+    "update:asar": "node scripts/rebuild-asar.cjs"
   },
   "devDependencies": {
     "electron": "34.5.8",
