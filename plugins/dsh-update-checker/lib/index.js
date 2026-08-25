@@ -83,19 +83,22 @@ async function handleCheck(req, res) {
   // prerelease (rc) — use the release list instead and take the first.
   const rel = await githubGet('/repos/' + REPO + '/releases?per_page=3');
   let latest = null;
+  let recent = [];
   if (rel.status === 200 && Array.isArray(rel.json) && rel.json.length > 0) {
-    const r = rel.json[0];
-    latest = {
+    recent = rel.json.map((r) => ({
       tag: r.tag_name || '',
       name: r.name || '',
       publishedAt: r.published_at || null,
       htmlUrl: r.html_url || '',
-    };
+      version: (r.tag_name || '').replace(/^dsh-v?/i, '').replace(/^v/, ''),
+    }));
+    latest = recent[0];
   } else {
     // Fall back to tags.
     const tags = await githubGet('/repos/' + REPO + '/tags?per_page=3');
     if (tags.status === 200 && Array.isArray(tags.json) && tags.json.length > 0) {
       latest = { tag: tags.json[0].name || '', name: '', publishedAt: null, htmlUrl: 'https://github.com/' + REPO };
+      recent = [{ tag: tags.json[0].name || '', name: '', publishedAt: null, htmlUrl: 'https://github.com/' + REPO, version: (tags.json[0].name || '').replace(/^dsh-v?/i, '').replace(/^v/, '') }];
     }
   }
 
@@ -116,6 +119,7 @@ async function handleCheck(req, res) {
     current,
     isUpdate,
     latest: { ...latest, version: latestVersion },
+    recent,
   });
 }
 
