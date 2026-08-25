@@ -23,6 +23,12 @@ const PATCHES = path.join(__dirname, "..", "patches");
 const FD_MARK = "const allImages = files.length > 0";
 const FD_OLD = fs.readFileSync(path.join(PATCHES, "file-drop.old.txt"), "utf8");
 const FD_NEW = fs.readFileSync(path.join(PATCHES, "file-drop.new.txt"), "utf8");
+const II_HOST_MARK = "from-url";
+const II_HOST_OLD = fs.readFileSync(path.join(PATCHES, "ii-host-url.old.txt"), "utf8");
+const II_HOST_NEW = fs.readFileSync(path.join(PATCHES, "ii-host-url.new.txt"), "utf8");
+const II_CLIENT_MARK = "url-images";
+const II_CLIENT_OLD = fs.readFileSync(path.join(PATCHES, "ii-client-url.old.txt"), "utf8");
+const II_CLIENT_NEW = fs.readFileSync(path.join(PATCHES, "ii-client-url.new.txt"), "utf8");
 const FD_FOLDER_MARK = "drainDroppedImages";
 const FD_REG_OLD = fs.readFileSync(path.join(PATCHES, "fd-register.old.txt"), "utf8");
 const FD_REG_NEW = fs.readFileSync(path.join(PATCHES, "fd-register.new.txt"), "utf8");
@@ -80,6 +86,18 @@ function apply(_ctx) {
     if (dd.includes(FD_HANDLE_OLD)) dd = dd.replace(FD_HANDLE_OLD, FD_HANDLE_NEW);
     return dd;
   }, "file-drop folder images");
+
+  // 1c) image-input: 图片链接 URL → 下载入草稿(host + client)
+  const iiHost = path.join(PROFILE_NM, "dsh-plugin-image-input", "lib", "index.js");
+  patchFile(iiHost, II_HOST_MARK, (dd) => {
+    if (!dd.includes(II_HOST_OLD)) return null;
+    return dd.replace(II_HOST_OLD, II_HOST_NEW);
+  }, "image-input from-url route");
+  const iiClient = path.join(PROFILE_NM, "dsh-plugin-image-input", "lib", "client.js");
+  patchFile(iiClient, II_CLIENT_MARK, (dd) => {
+    if (!dd.includes(II_CLIENT_OLD)) return null;
+    return dd.replace(II_CLIENT_OLD, II_CLIENT_NEW);
+  }, "image-input url-images intercept");
 
   // 2) file-upload: 图片原生附件
   patchFile(path.join(PROFILE_NM, "dsh-file-upload", "lib", "client.js"), FU_MARK, (d) => {

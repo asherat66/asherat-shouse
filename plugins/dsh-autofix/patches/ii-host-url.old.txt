@@ -1,0 +1,32 @@
+  webServer.register({
+    kind: 'exact',
+    path: '/plugins/mmv/from-url',
+    handler: async (req, res) => {
+      if (!allowedOrigin(req)) return json(res, 403, { ok: false, error: 'forbidden' })
+      if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method not allowed' })
+      let payload
+      try { payload = JSON.parse(await readBody(req)) } catch (e) {
+        return json(res, 400, { ok: false, error: 'bad request' })
+      }
+      const url = String(payload.url || '')
+      if (!/^https?:\/\//i.test(url)) return json(res, 400, { ok: false, error: 'invalid url' })
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 15000)
+        const r = await fetch(url, { signal: controller.signal, redirect: 'follow' })
+        clearTimeout(timer)
+        if (!r.ok) return json(res, 502, { ok: false, error: 'fetch failed: HTTP ' + r.status })
+        const buf = Buffer.from(await r.arrayBuffer())
+        if (buf.length === 0) return json(res, 502, { ok: false, error: 'empty body' })
+        if (buf.length > 20 * 1024 * 1024) return json(res, 413, { ok: false, error: 'image too large (>20MB)' })
+        const mime = r.headers.get('content-type') || 'image/png'
+        const baseMime = mime.indexOf('image/') === 0 ? mime.split(';')[0] : 'image/png'
+        const name = decodeURIComponent(url.split('?')[0].split('/').pop() || 'image.png')
+        json(res, 200, { ok: true, name, mime: baseMime, base64: buf.toString('base64'), bytes: buf.length })
+      } catch (e) {
+        debugLog('from-url error ' + String(e && e.message || e))
+        json(res, 502, { ok: false, error: 'download failed: ' + String(e && e.message || e) })
+      }
+    },
+  })
+}

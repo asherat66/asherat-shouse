@@ -1,0 +1,24 @@
+      const interceptSend = (e) => {
+        const { props: p, busy: b } = stateRef.current
+        if (b) return
+        const input = p.input
+        const inputActions = p.inputActions
+        const conversation = p.conversation
+        const ids = (input && input.imageIds) || []
+        if (ids.length === 0) return
+        const attachments = conversation ? conversation.draftImages(ids) : []
+        if (attachments.length === 0) return
+        if (e && e.preventDefault) e.preventDefault()
+        if (e && e.stopPropagation) e.stopPropagation()
+        if (e && e.stopImmediatePropagation) e.stopImmediatePropagation()
+        modelSupportsImage().then((multi) => {
+          if (multi) {
+            setMsg('当前模型支持图片：直接发送即可')
+            // Fix: 模型支持图片时同样要提交发送 —— 拦截已杀掉原生事件,
+            // 不调 submit() 会导致"点发送没反应"。
+            try { inputActions.submit() } catch (err) { /* 忽略 */ }
+            return
+          }
+          doConvertAndSend(attachments, input, inputActions, conversation, ids)
+        }).catch(() => doConvertAndSend(attachments, input, inputActions, conversation, ids))
+      }
