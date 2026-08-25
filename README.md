@@ -90,6 +90,23 @@ folder, repair the links once at the new location:
 node scripts/relink.cjs <path-to-win-unpacked>
 ```
 
+## CI release (GitHub Actions)
+
+Push a tag to build and publish automatically:
+
+```bash
+git tag v0.1.2 && git push origin v0.1.2
+```
+
+`.github/workflows/release.yml` (windows-latest) then runs: clone + build the
+dsh main repo → npm install → assemble resources → electron-builder dir package
+→ `make-dist.cjs` → compile the Bun installer → create a GitHub Release with
+both assets (installer + dist zip). Manual runs via the Actions tab are also
+supported (`workflow_dispatch`).
+
+First CI run takes ~30-40 min (mostly the dsh repo build); later runs benefit
+from the runner package cache.
+
 ## Release (publishing the installer)
 
 See [RELEASE.md](RELEASE.md) for the full checklist. Short version:
