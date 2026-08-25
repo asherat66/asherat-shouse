@@ -1,0 +1,1 @@
+      const text = `[\u56FE\u7247: ${name}] \u5F53\u524D\u6A21\u578B\u652F\u6301\u56FE\u50CF\u8F93\u5165,\u8BF7\u7528 read_image \u5DE5\u5177\u67E5\u770B ${payload.path}`;

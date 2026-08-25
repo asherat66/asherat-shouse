@@ -1,0 +1,12 @@
+      // [fix] 视觉模型支持图片: 直接加入原生草稿(多模态),不再插入文本提示。
+      try {
+        const cv = actx.get("conversation");
+        if (cv && typeof cv.createDraftImages === "function") {
+          const imgs = cv.createDraftImages([file]);
+          const inp = cv.input.for(actx);
+          if (inp && typeof inp.addImages === "function" && inp.addImages(imgs.map(function (x) { return x.id; }))) {
+            return payload.path;
+          }
+        }
+      } catch (e) { /* fall through to text hint */ }
+            const text = `[\u56FE\u7247: ${name}] \u5F53\u524D\u6A21\u578B\u652F\u6301\u56FE\u50CF\u8F93\u5165,\u8BF7\u7528 read_image \u5DE5\u5177\u67E5\u770B ${payload.path}`;

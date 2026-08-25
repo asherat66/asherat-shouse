@@ -1,0 +1,17 @@
+        const onDrop = (e) => {
+          if (!hasFiles(e)) return
+          const files = Array.from((e.dataTransfer && e.dataTransfer.files) || [])
+          const allImages = files.length > 0 && files.every(function (f) { return f.type.indexOf('image/') === 0; })
+          if (allImages) {
+            // 图片拖拽:放行给 DSH 原生的图片拖拽处理(InputBar intakeImages / DropOverlay),
+            // 它会调用 createDraftImages 加入多模态草稿 —— 视觉模型直接看图。
+            depthRef.current = 0
+            setDrag(false)
+            return
+          }
+          e.preventDefault()
+          e.stopPropagation()
+          depthRef.current = 0
+          setDrag(false)
+          void handleDrop(e)
+        }

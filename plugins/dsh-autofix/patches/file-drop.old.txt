@@ -1,0 +1,8 @@
+        const onDrop = (e) => {
+          if (!hasFiles(e)) return
+          e.preventDefault()
+          e.stopPropagation()
+          depthRef.current = 0
+          setDrag(false)
+          void handleDrop(e)
+        }

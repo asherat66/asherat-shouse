@@ -1,0 +1,18 @@
+{
+  "name": "dsh-autofix",
+  "version": "0.1.0",
+  "description": "Startup auto-adaptation: re-applies local patches to third-party plugins (file-drop/file-upload image draft) and the dsh llm adapter (General Rules injection) after updates. · 启动时自动适配：第三方插件更新后自动重打补丁。",
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  }
+}

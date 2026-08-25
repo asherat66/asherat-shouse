@@ -1,0 +1,4 @@
+# dsh-autofix bundle patch.
+- insert:
+    - id: autofix
+      name: 'dsh-autofix'
