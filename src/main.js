@@ -78,7 +78,10 @@ function startDshServer() {
 
   dshProcess.on('exit', (code) => {
     log(`dsh 服务退出, code=${code}`);
-    if (!serverReady && code !== 0) {
+    // 仅当「非用户主动关闭」且「服务尚未就绪」且「退出码非 0」时才视为启动失败。
+    // 用户关闭窗口时 stop() 会设置 processHasShutdown 并 kill 子进程,
+    // 子进程以非 0 码退出属正常现象,不应弹错误框。
+    if (!processHasShutdown && !serverReady && code !== 0) {
       dialog.showErrorBox(
         'DeepSeek Harness 启动失败',
         `dsh 服务异常退出 (code=${code})。请查看安装日志。`,
@@ -119,6 +122,7 @@ function createWindow() {
   });
 
   const stop = () => {
+    processHasShutdown = true; // 用户主动关闭:阻止 exit 回调误判为启动失败
     serverReady = false;
     if (dshProcess && !dshProcess.killed) {
       log('关闭 dsh 服务子进程...');
