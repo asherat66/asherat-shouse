@@ -1,0 +1,22 @@
+# build artifacts (never commit)
+node_modules/
+dist/
+resources/
+
+# logs
+*.log
+
+# icon source image (copyright risk - use your own when publishing)
+build/source-icon.png
+
+# re-include scripts/lib (build dependency; root .gitignore has a bare lib/ rule)
+!scripts/lib/
+!scripts/lib/*.cjs
+
+# local dev files
+scripts/_expand_measure.cjs
+scripts/_reparse_check.cjs
+scripts/_test_readlink.cjs
+scripts/flatten-tree.cjs
+scripts/check_icon.py
+scripts/check_pil.py

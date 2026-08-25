@@ -1,0 +1,19 @@
+{
+  "name": "deepseek-harness-desktop",
+  "version": "0.1.1",
+  "description": "DeepSeek Harness 桌面版 - 由 Electron 包装的 dsh Web UI",
+  "license": "MIT",
+  "author": "DeepSeek Harness Desktop",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "assemble": "node scripts/assemble-resources.cjs",
+    "pack": "node scripts/assemble-resources.cjs && electron-builder --win nsis --config electron-builder.yml",
+    "pack:dir": "electron-builder --win dir --config electron-builder.yml"
+  },
+  "devDependencies": {
+    "electron": "34.5.8",
+    "electron-builder": "^26.0.12"
+  }
+}

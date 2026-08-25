@@ -1,0 +1,31 @@
+# electron-builder 配置 —— DeepSeek Harness 桌面版
+appId: com.deepseek.harness
+productName: DeepSeek Harness
+electronVersion: 34.5.8
+copyright: Copyright © 2026 DeepSeek Harness
+
+directories:
+  output: dist
+  buildResources: build
+
+# 只打进 Electron 壳自身(主进程/preload/图标),dsh 运行环境不在这里声明:
+# electron-builder 内置复制器无法正确处理含 Windows junction 的 node_modules(交叉引用网络导致
+# 复制不完整/卡死),改由 afterPack 钩子用 scripts/lib/copy-tree.cjs(保留 junction + 改写路径)注入。
+files:
+  - src/**/*
+  - package.json
+  - "!node_modules/**/*"
+  - build/icon.png
+
+# 注入 dsh(代码库)与独立 node 运行时到 win-unpacked/resources/
+afterPack: scripts/after-pack.cjs
+
+win:
+  target:
+    - target: zip
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+# 免安装 zip 包:解压即用,无需安装向导
