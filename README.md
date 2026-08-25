@@ -115,6 +115,14 @@ See [RELEASE.md](RELEASE.md) for the full checklist. Short version:
 2. `cd installer && bun build src/installer.ts --compile` → `dsh-installer.exe`
 3. Upload both to a GitHub Release; users just run the exe.
 
+## General Rules mechanism
+
+The global rules file (`~/.dsh/AGENTS.md`) is injected into every session's
+system prompt at the LLM adapter level (see [docs/GENERAL-RULES.md](docs/GENERAL-RULES.md)).
+This requires an idempotent patch on the dsh main repo
+(`node scripts/patch-dsh-llm.cjs <dsh-repo>` before building) — CI applies it
+automatically. Don't drop it on rebuilds.
+
 ## Icon
 
 The app icon can be regenerated from any image:

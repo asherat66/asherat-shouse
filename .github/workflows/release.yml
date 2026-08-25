@@ -40,6 +40,9 @@ jobs:
       - name: Clone dsh main repo
         run: git clone --depth 1 https://github.com/deepseek-ai/deepseek-harness dsh
 
+      - name: Patch dsh llm adapter (General Rules injection)
+        run: node scripts/patch-dsh-llm.cjs dsh
+
       - name: Build dsh CLI
         working-directory: dsh
         run: |
