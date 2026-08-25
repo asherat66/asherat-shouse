@@ -49,6 +49,47 @@ If the dsh repo is not a sibling of this repo, set `DSH_SRC` before assembling:
 DSH_SRC=C:/path/to/dsh npm run assemble
 ```
 
+## Install on another machine (plugins + rules)
+
+After the build above, run the one-click installer **from the desktop repo** to
+add the bundled plugins (update-checker, general-rules, prompt-copy) into the
+dsh web profile and initialize the General Rules file:
+
+```bash
+cd desktop
+node scripts/install-plugins.cjs
+```
+
+What it does:
+1. `pnpm add` every plugin under `plugins/` into `~/.dsh/profiles/web` (portable `file:` references)
+2. Appends the plugins to the profile's `dsh.profile.bundles`
+3. Seeds `~/.dsh/AGENTS.md` from the bundled General Rules template (never overwrites existing)
+4. Prints optional third-party plugin commands
+
+Third-party plugins (market, file upload, cost meter, image input, ...) are
+installed through the plugin market or the dsh CLI:
+
+```bash
+dsh plugin --profile web add dshmarket
+dsh plugin --profile web add dsh-file-upload
+dsh plugin --profile web add dsh-cost-meter
+dsh plugin --profile web add dsh-plugin-image-input
+dsh plugin --profile web add @opendsh/dsh-plugin-setting-mcp
+```
+
+Restart the app (or refresh the page) after installing. Rules are editable in
+**Settings → General Rules**; "Version updates" is in **Settings → Version updates**.
+
+### Moving a built app folder
+
+The packaged `dist/win-unpacked` tree uses Windows junctions (pnpm workspace
+layout) whose targets are absolute to the build location. To move or copy the
+folder, repair the links once at the new location:
+
+```bash
+node scripts/relink.cjs <path-to-win-unpacked>
+```
+
 ## Icon
 
 The app icon can be regenerated from any image:
