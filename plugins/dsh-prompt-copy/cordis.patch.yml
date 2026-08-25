@@ -1,0 +1,4 @@
+# dsh-prompt-copy bundle patch.
+- insert:
+    - id: prompt-copy
+      name: 'dsh-prompt-copy'

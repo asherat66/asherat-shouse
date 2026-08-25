@@ -1,0 +1,22 @@
+{
+  "name": "dsh-prompt-copy",
+  "version": "0.1.0",
+  "description": "Prompt Copy: embed jiro.build (style-prompt library) into dsh with two modes — Web or PPT (web prompts auto-adapted for PPT design). · 内嵌 jiro.build 风格 Prompt 库：做网页 / 做 PPT（自动转 PPT Prompt）。",
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  }
+}
