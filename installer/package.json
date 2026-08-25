@@ -1,0 +1,9 @@
+{
+  "name": "dsh-installer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "bun build --compile --target=bun-windows-x64 src/installer.ts --outfile ../dist/release/dsh-installer.exe"
+  },
+  "dependencies": {}
+}

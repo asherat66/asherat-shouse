@@ -90,6 +90,14 @@ folder, repair the links once at the new location:
 node scripts/relink.cjs <path-to-win-unpacked>
 ```
 
+## Release (publishing the installer)
+
+See [RELEASE.md](RELEASE.md) for the full checklist. Short version:
+
+1. `node scripts/make-dist.cjs` → produces `dist/release/dsh-desktop.v<ver>.win-x64.zip`
+2. `cd installer && bun build src/installer.ts --compile` → `dsh-installer.exe`
+3. Upload both to a GitHub Release; users just run the exe.
+
 ## Icon
 
 The app icon can be regenerated from any image:
