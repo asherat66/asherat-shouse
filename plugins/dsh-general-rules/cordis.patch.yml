@@ -1,0 +1,4 @@
+# dsh-general-rules bundle patch: mounts the server half as one Cordis loader row.
+- insert:
+    - id: general-rules
+      name: 'dsh-general-rules'

@@ -1,0 +1,22 @@
+{
+  "name": "dsh-general-rules",
+  "version": "0.1.0",
+  "description": "Global rules (AGENTS.md) editor in settings — highest-precedence instructions injected into every session via dsh-agent-instructions. · 最高优先级全局规则编辑器（写入 ~/.dsh/AGENTS.md，自动注入每个会话）。",
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  }
+}
