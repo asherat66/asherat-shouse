@@ -134,6 +134,71 @@ function createWindow() {
 }
 
 let processHasShutdown = false;
+// 本地图片读取(给渲染进程的视觉识别桥): sandbox preload 无法使用 fs,走 IPC
+const { ipcMain } = require('electron');
+const fsp = require('node:fs');
+const pathp = require('node:path');
+const IMG_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'jfif', 'avif', 'ico']);
+function isImg(p) { return IMG_EXT.has(pathp.extname(String(p)).slice(1).toLowerCase()); }
+ipcMain.handle('dsh:resolve-dropped', (_ev, srcPaths) => {
+  try {
+    const list = Array.isArray(srcPaths) ? srcPaths : [];
+    const paths = [];
+    const images = [];
+    const found = [];
+    const collect = (dir) => {
+      let entries;
+      try { entries = fsp.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const e of entries) {
+        if (found.length >= 60) return;
+        const p2 = pathp.join(dir, e.name);
+        try {
+          if (e.isDirectory()) collect(p2);
+          else if (e.isFile() && isImg(p2)) {
+            const st2 = fsp.statSync(p2);
+            if (st2.size <= 15 * 1024 * 1024) found.push(p2);
+          }
+        } catch { /* skip */ }
+      }
+    };
+    for (const p2 of list) {
+      try {
+        const st = fsp.statSync(p2);
+        if (st.isDirectory()) {
+          collect(p2);
+          paths.push(p2);
+        } else if (st.isFile()) {
+          paths.push(p2);
+          if (isImg(p2)) found.push(p2);
+        }
+      } catch { /* skip */ }
+    }
+    for (const img of found.slice(0, 60)) {
+      try {
+        const buf = fsp.readFileSync(img);
+        images.push({ name: pathp.basename(img), base64: buf.toString('base64'), mime: 'image/' + pathp.extname(img).slice(1).toLowerCase().replace('jpg', 'jpeg') });
+      } catch { /* skip */ }
+    }
+    return { paths, images };
+  } catch { return { paths: [], images: [] }; }
+});
+
+ipcMain.handle('dsh:read-local-image', (_ev, p) => {
+  try {
+    const clean = String(p || '').replace(/^["']+|["']+$/g, '').trim();
+    if (!isImg(clean)) return null;
+    const st = fsp.statSync(clean);
+    if (!st.isFile() || st.size > 15 * 1024 * 1024) return null;
+    const buf = fsp.readFileSync(clean);
+    return { name: pathp.basename(clean), base64: buf.toString('base64'), mime: 'image/' + pathp.extname(clean).slice(1).toLowerCase().replace('jpg', 'jpeg'), bytes: buf.length };
+  } catch { return null; }
+});
+
+// 调试: DSH_DEBUG=1 时开启 CDP(本机 9333 端口),便于排查渲染进程问题
+if (process.env.DSH_DEBUG === '1') {
+  try { app.commandLine.appendSwitch('remote-debugging-port', '9333'); } catch {}
+}
+
 app.whenReady().then(async () => {
   try {
     await startDshServer();
