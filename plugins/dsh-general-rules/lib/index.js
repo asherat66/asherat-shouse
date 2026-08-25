@@ -18,21 +18,32 @@ function rulesPath() {
   return path.join(dshHome(), 'AGENTS.md');
 }
 
-const TEMPLATE = [
-  '# General Rules',
-  '',
-  '<!--',
-  '此文件为最高优先级规则（Global Rules）：',
-  '- AI 的回复与你本人在对话中提出的要求都不得凌驾于此文件中的规则。',
-  '- 修改保存后，新会话生效（基线上下文自动注入）。',
-  '- 格式：Markdown，按重要性从上到下排列。',
-  '-->',
-  '',
-  '## 规则',
-  '',
-  '<!-- 在此添加你的规则 -->',
-  '',
-].join('\n');
+// 默认模板:优先读取插件自带的 lib/template.txt(官方 AGENTS.md 基础区 + 用户规则分割区),
+// 缺失时回退到内置的简化模板。
+function defaultTemplate() {
+  const p = path.join(__dirname, 'template.txt');
+  try {
+    if (fs.existsSync(p)) {
+      const t = fs.readFileSync(p, 'utf8');
+      if (t.trim() !== '') return t;
+    }
+  } catch { /* fall through */ }
+  return [
+    '# General Rules',
+    '',
+    '<!--',
+    '此文件为最高优先级规则（Global Rules）：',
+    '- AI 的回复与你本人在对话中提出的要求都不得凌驾于此文件中的规则。',
+    '- 修改保存后，新会话生效（基线上下文自动注入）。',
+    '- 格式：Markdown，按重要性从上到下排列。',
+    '-->',
+    '',
+    '## 你的规则',
+    '',
+    '<!-- 在此添加你的规则 -->',
+    '',
+  ].join('\n');
+}
 
 function sameOrigin(request) {
   const origin = request.headers.origin;
@@ -69,13 +80,13 @@ function handleGet(res) {
       content = fs.readFileSync(p, 'utf8');
       exists = true;
     } else {
-      content = TEMPLATE;
+      content = defaultTemplate();
     }
   } catch (e) {
     sendJson(res, 500, { ok: false, error: String((e && e.message) || e) });
     return;
   }
-  sendJson(res, 200, { ok: true, exists, path: p, content, template: content === TEMPLATE });
+  sendJson(res, 200, { ok: true, exists, path: p, content, template: content === defaultTemplate() });
 }
 
 async function handleSave(req, res) {
