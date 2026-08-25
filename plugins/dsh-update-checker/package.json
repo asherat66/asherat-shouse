@@ -1,0 +1,22 @@
+{
+  "name": "dsh-update-checker",
+  "version": "0.1.0",
+  "description": "Check for new DeepSeek Harness releases from the settings panel (via GitHub API). · 在设置面板中检查 DeepSeek Harness 主仓库的最新版本。",
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  }
+}

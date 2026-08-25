@@ -1,0 +1,4 @@
+# dsh-update-checker bundle patch: mounts the server half as one Cordis loader row.
+- insert:
+    - id: update-checker
+      name: 'dsh-update-checker'
