@@ -23,6 +23,11 @@ const PATCHES = path.join(__dirname, "..", "patches");
 const FD_MARK = "const allImages = files.length > 0";
 const FD_OLD = fs.readFileSync(path.join(PATCHES, "file-drop.old.txt"), "utf8");
 const FD_NEW = fs.readFileSync(path.join(PATCHES, "file-drop.new.txt"), "utf8");
+const FD_FOLDER_MARK = "drainDroppedImages";
+const FD_REG_OLD = fs.readFileSync(path.join(PATCHES, "fd-register.old.txt"), "utf8");
+const FD_REG_NEW = fs.readFileSync(path.join(PATCHES, "fd-register.new.txt"), "utf8");
+const FD_HANDLE_OLD = fs.readFileSync(path.join(PATCHES, "fd-handle.old.txt"), "utf8");
+const FD_HANDLE_NEW = fs.readFileSync(path.join(PATCHES, "fd-handle.new.txt"), "utf8");
 const FU_MARK = "cv.createDraftImages";
 const FU_OLD = fs.readFileSync(path.join(PATCHES, "file-upload.old.txt"), "utf8");
 const FU_NEW = fs.readFileSync(path.join(PATCHES, "file-upload.new.txt"), "utf8");
@@ -66,6 +71,15 @@ function apply(_ctx) {
     if (!d.includes(FD_OLD)) return null;
     return d.replace(FD_OLD, FD_NEW);
   }, "file-drop image pass-through");
+
+  // 1b) file-drop: 目录/文件图片 → 原生多模态草稿(桌面壳解析)
+  const fdClient = path.join(PROFILE_NM, "dsh-file-drop", "client.js");
+  patchFile(fdClient, FD_FOLDER_MARK, (dd) => {
+    if (!dd.includes(FD_REG_OLD)) return null;
+    dd = dd.replace(FD_REG_OLD, FD_REG_NEW);
+    if (dd.includes(FD_HANDLE_OLD)) dd = dd.replace(FD_HANDLE_OLD, FD_HANDLE_NEW);
+    return dd;
+  }, "file-drop folder images");
 
   // 2) file-upload: 图片原生附件
   patchFile(path.join(PROFILE_NM, "dsh-file-upload", "lib", "client.js"), FU_MARK, (d) => {

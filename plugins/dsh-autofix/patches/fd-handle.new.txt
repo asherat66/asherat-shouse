@@ -1,0 +1,28 @@
+      async function handleDrop(e) {
+        if (busyRef.current) return
+        // [folder-images] 桌面壳解析出的目录/文件图片 → 原生多模态草稿(视觉模型直接看图)
+        try {
+          if (typeof window !== 'undefined' && window.dshDesktop && typeof window.dshDesktop.drainDroppedImages === 'function') {
+            const imgs = window.dshDesktop.drainDroppedImages()
+            if (imgs.length > 0) {
+              const actx = props.sessionsCtx ? props.sessionsCtx.scope(optsRef.current.sessionId) : null
+              const cv = actx ? actx.get('conversation') : null
+              if (cv && typeof cv.createDraftImages === 'function') {
+                const files2 = imgs.map(function (it) {
+                  const bin = atob(it.base64)
+                  const bytes = new Uint8Array(bin.length)
+                  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+                  return new File([bytes], it.name, { type: it.mime })
+                })
+                const atts = cv.createDraftImages(files2)
+                const inp = cv.input && cv.input.for ? cv.input.for(actx) : null
+                if (inp && typeof inp.addImages === 'function' && inp.addImages(atts.map(function (x) { return x.id; }))) {
+                  statusStore.set('✓ 已加入 ' + files2.length + ' 张图片(视觉模型可识别)')
+                  return
+                }
+              }
+            }
+          }
+        } catch (err) { /* 回退到路径引用 */ }
+        const files = Array.from((e.dataTransfer && e.dataTransfer.files) || [])
+

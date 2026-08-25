@@ -1,0 +1,4 @@
+      async function handleDrop(e) {
+        if (busyRef.current) return
+        const files = Array.from((e.dataTransfer && e.dataTransfer.files) || [])
+
