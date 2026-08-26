@@ -50,4 +50,8 @@ contextBridge.exposeInMainWorld('dshDesktop', {
     // IPC invoke 是异步,但调用方已按 Promise 处理(拦截流程 async)
     return ipcRenderer.invoke('dsh:read-local-image', String(p || ''));
   },
+  // 独立窗口打开外部站点(iframe 内 OAuth 登录受限时使用; 同 session 共享登录态)
+  openExternalWindow(url) {
+    return ipcRenderer.invoke('dsh:open-external-window', String(url || ''));
+  },
 });

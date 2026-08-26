@@ -8,6 +8,22 @@ Electron desktop wrapper for the DeepSeek Harness (dsh) Web UI.
 - Bundles an independent Node runtime - no system Node required
 - Works on Windows x64
 
+Bundled plugins give the desktop build these extras on top of stock dsh:
+
+- **Vision everywhere** — paste an image, drop a file/folder of images, send a
+  local path or an image URL: the vision model sees the actual image (native
+  multimodal drafts, preload IPC bridge, from-url proxy)
+- **Settings → Version updates** — one-click check against the dsh main repo
+- **Settings → General Rules** — global highest-precedence rules injected into
+  every session's system prompt at the LLM adapter level; edits apply to the
+  next message immediately
+- **Settings → prompt copy** — embedded jiro.build style-prompt library with
+  Web / PPT modes (web prompts auto-adapted to PPT design prompts); login via a
+  separate window (iframe OAuth is blocked by browsers)
+- **dsh-autofix** — on every boot, idempotently re-applies the local patches
+  (file-drop/file-upload vision fixes, adapter rules injection, image-input
+  URL/path/clipboard handling) after third-party plugin updates
+
 ## Build from source
 
 ### Prerequisites

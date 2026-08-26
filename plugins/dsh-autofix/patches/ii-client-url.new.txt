@@ -18,7 +18,7 @@
           setMsg('正在读取本地图片…')
           Promise.all(localPathM.slice(0, 10).map(async (u) => {
             try {
-              const j = window.dshDesktop.readLocalImage(u)
+              const j = await window.dshDesktop.readLocalImage(u)
               if (!j) throw new Error('unreadable')
               const bin = atob(j.base64)
               const bytes = new Uint8Array(bin.length)

@@ -1,1 +1,2 @@
-        (props) => React.createElement(DropZone, Object.assign({}, props, { sessionsCtx: ctx.sessions }))
+    const inject = ['slots', 'sessions']
+(props) => React.createElement(DropZone, Object.assign({}, props, { sessionsCtx: ctx.sessions }))

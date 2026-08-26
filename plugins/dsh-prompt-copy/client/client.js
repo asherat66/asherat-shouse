@@ -120,6 +120,22 @@ window.__ModuleLoader__.load({ id: "dsh-prompt-copy", factory: (require) => {
           h("button", { onClick: function () { set({ tab: "web", paste: s.paste, output: s.output }); }, style: tabStyle(s.tab === "web") }, t("tabWeb")),
           h("button", { onClick: function () { set({ tab: "ppt", paste: s.paste, output: s.output }); }, style: tabStyle(s.tab === "ppt") }, t("tabPpt")),
           h("span", { style: { flex: 1 } }),
+          h("button", {
+            title: "iframe 内 OAuth 登录(Google)会被浏览器禁止; 点击后在独立窗口登录, 完成后回此页面刷新即可",
+            onClick: function () {
+              if (window.dshDesktop && window.dshDesktop.openExternalWindow) {
+                window.dshDesktop.openExternalWindow(JIRO_URL);
+                set({ tab: s.tab, paste: s.paste, output: s.output, loginNote: true });
+              } else {
+                window.open(JIRO_URL, "_blank");
+              }
+            },
+            style: { cursor: "pointer", padding: "4px 10px", borderRadius: 8, fontSize: 12, border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.22))", background: "transparent" },
+            children: "登录 jiro（独立窗口）",
+          }),
+          s.loginNote
+            ? h("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary)" } }, "→ 登录完成后：关闭独立窗口，回到本面板刷新页面即可")
+            : null,
           h("button", { onClick: onClose, style: { background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--dsw-alias-label-tertiary)" } }, "✕")),
         s.tab === "web"
           ? h("div", { style: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 } },

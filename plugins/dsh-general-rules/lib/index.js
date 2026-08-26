@@ -113,36 +113,9 @@ async function handleSave(req, res) {
 
 // 将 General Rules 注册为真正的系统提示片段(每次组装实时读文件)。
 // 优先级:位于 harness identity(-100) 之后、persona(0) 之前,高于一切用户消息层。
-function registerSystemPrompt(ctx) {
-  ctx.inject(['systemPrompt'], (hostCtx) => {
-    console.log('[dsh-general-rules] systemPrompt service available');
-    hostCtx.effect(() => {
-      try {
-        const sys = hostCtx.systemPrompt;
-        console.log('[dsh-general-rules] registering section, sys type:', typeof sys, sys && typeof sys.section);
-        sys.section({
-          name: 'general-rules',
-          order: -90,
-          text: () => {
-            try {
-              console.log('[dsh-general-rules] section text evaluated');
-              const p = rulesPath();
-              if (!fs.existsSync(p)) return '';
-              const c = fs.readFileSync(p, 'utf8');
-              return c.trim() === '' ? '' : '## General Rules (highest precedence)' + String.fromCharCode(10, 10) + c;
-            } catch { return ''; }
-          },
-        });
-        console.log('[dsh-general-rules] section registered');
-      } catch (e) {
-        console.error('[dsh-general-rules] section failed:', e && e.message);
-      }
-    }, 'dsh-general-rules: system prompt section');
-  });
-}
-
 function apply(ctx) {
-  registerSystemPrompt(ctx);
+  // 注: General Rules 的 system 注入由 llm-deepseek adapter 完成(发送前拼入),
+  // 此处无需再注册 assemble 钩子。
   ctx.inject(['webServer'], (hostCtx) => {
     hostCtx.effect(() => {
       hostCtx.webServer.register({

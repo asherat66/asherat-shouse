@@ -136,6 +136,17 @@ function createWindow() {
 let processHasShutdown = false;
 // 本地图片读取(给渲染进程的视觉识别桥): sandbox preload 无法使用 fs,走 IPC
 const { ipcMain } = require('electron');
+// 独立窗口: 跨域 iframe 内的 OAuth 登录(Google)会被浏览器禁止,
+// 用与主窗口同 session 的 BrowserWindow 打开, 登录态自动共享。
+ipcMain.handle('dsh:open-external-window', (_ev, url) => {
+  try {
+    const u = String(url || '');
+    if (!/^https?:\/\//i.test(u)) return { ok: false };
+    const win = new BrowserWindow({ width: 1100, height: 800, autoHideMenuBar: true });
+    win.loadURL(u);
+    return { ok: true };
+  } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
+});
 const fsp = require('node:fs');
 const pathp = require('node:path');
 const IMG_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'jfif', 'avif', 'ico']);
