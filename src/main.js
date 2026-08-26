@@ -19,7 +19,7 @@ const NODE_EXE =
     ? path.join(resourcesPath, 'node', process.platform === 'win32' ? 'node.exe' : 'node')
     : process.execPath; // Electron 主进程的 node 仅作开发回退,生产会嵌入独立 node.exe
 
-const PORT = 3080;
+const PORT = Number(process.env.DSH_PORT || 3080); // 支持多实例/端口隔离(DSH_PORT)
 const HOST = '127.0.0.1';
 const READY_TIMEOUT_MS = 120000;
 
@@ -63,8 +63,8 @@ function startDshServer() {
   const cliBin = path.join(DSH_ROOT, 'apps', 'cli', 'lib', 'bin.js');
   const useTsx = !fs.existsSync(cliBin);
   const args = useTsx
-    ? ['--import', 'tsx/esm', path.join(DSH_ROOT, 'apps', 'cli', 'src', 'bin.ts'), '--profile', 'web', '--no-open']
-    : [cliBin, '--profile', 'web', '--no-open'];
+    ? ['--import', 'tsx/esm', path.join(DSH_ROOT, 'apps', 'cli', 'src', 'bin.ts'), '--profile', 'web', '--no-open', '--port', String(PORT)]
+    : [cliBin, '--profile', 'web', '--no-open', '--port', String(PORT)];
 
   dshProcess = spawn(NODE_EXE, args, {
     cwd: DSH_ROOT,

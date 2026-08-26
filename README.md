@@ -191,6 +191,16 @@ folder, repair the links once at the new location:
 node scripts/relink.cjs <path-to-win-unpacked>
 ```
 
+## 更新日志
+
+### v0.1.2 (2026-08-26)
+- **修复**: 安装器对 ZIP64 发行包(条目数 >65535)解压不完整的问题；现在可完整解压全部 9.2 万条目
+- **修复**: `dsh-autofix` 在 `DSH_HOME` 布局下定位插件目录不正确的问题
+- **新增**: 桌面壳支持 `DSH_PORT` 环境变量(多实例/端口隔离)，并透传 `--port` 给内置 dsh web
+
+### v0.1.1 (2026-08-26)
+- 首个开源发布: 绿色版 zip + bun 编译安装器(下载→解压→junction 重建→初始化→启动)
+
 ## CI release (GitHub Actions)
 
 Push a tag to build and publish automatically:

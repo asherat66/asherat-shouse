@@ -4,13 +4,15 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, createWriteStream, symlinkSync, readlinkSync, readdirSync } from "node:fs";
 import { join, resolve, dirname, sep, isAbsolute } from "node:path";
 import { homedir, platform, arch } from "node:os";
+
+const INSTALL_HOME = process.env.DSH_INSTALL_HOME || homedir();
 import { spawn, execSync } from "node:child_process";
 import { inflateRawSync } from "node:zlib";
 
 // ═══ 发布配置（发布前只需改这里）═══
 // GitHub 仓库:  https://github.com/<OWNER>/deepseek-harness-desktop
 // 发行资产名:   dsh-desktop.v<版本>.win-x64.zip   (由 scripts/make-dist.cjs 生成)
-const DIST_OWNER = "<OWNER>";              // ← 发布前改为真实 GitHub 账号
+const DIST_OWNER = "asherat66";              // ← 发布前改为真实 GitHub 账号
 const DIST_REPO = "deepseek-harness-desktop";
 const DIST_TAG = "latest";                 // 或固定版本 tag: v0.1.1
 const DIST_ARCHIVE = "dsh-desktop.v0.1.1.win-x64.zip";
@@ -91,8 +93,20 @@ function unzip(zipPath: string, dest: string): void {
     if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
   }
   if (eocd < 0) fatal("Invalid zip file");
-  const count = buf.readUInt16LE(eocd + 10);
+  let count = buf.readUInt16LE(eocd + 10);
   let off = buf.readUInt32LE(eocd + 16);
+  // ZIP64 支持: 条目数/偏移达 0xFFFF/0xFFFFFFFF 时, 真实值在 ZIP64 EOCD 中。
+  // EOCD 后紧跟 ZIP64 EOCD locator(20 字节, 0x07064b50), 其 +8 为 ZIP64 EOCD 偏移。
+  if (count === 0xffff || off === 0xffffffff) {
+    const lo = eocd - 20;
+    if (lo >= 0 && buf.readUInt32LE(lo) === 0x07064b50) {
+      const z64 = Number(buf.readBigUInt64LE(lo + 8));
+      if (z64 > 0 && z64 < buf.length && buf.readUInt32LE(z64) === 0x06064b50) {
+        count = Number(buf.readBigUInt64LE(z64 + 32));      // 总条目数
+        off = Number(buf.readBigUInt64LE(z64 + 48));        // 中央目录起始偏移
+      }
+    }
+  }
   const entries: { name: string; offset: number; method: number; csize: number }[] = [];
   for (let i = 0; i < count; i++) {
     if (buf.readUInt32LE(off) !== 0x02014b50) fatal("Central directory corrupted @" + off);
@@ -153,8 +167,8 @@ function relink(dest: string): void {
 }
 
 // 5. init profile (first run) + launch
-function initAndLaunch(appDir: string): void {
-  const home = homedir();
+function initProfile(appDir: string): void {
+  const home = INSTALL_HOME;
   const profDir = join(home, ".dsh", "profiles", "web");
   const shippedProfile = join(appDir, ".install", "profile");
   if (existsSync(shippedProfile) && !existsSync(join(profDir, "package.json"))) {
@@ -167,10 +181,16 @@ function initAndLaunch(appDir: string): void {
       writeFileSync(join(home, ".dsh", "AGENTS.md"), readFileSync(agents));
     }
     console.log("OK  configuration initialized");
+  } else {
+    console.log("(profile already exists or no shipped profile, skipped init)");
   }
+}
+
+function launchApp(appDir: string): void {
   const exe = join(appDir, "DeepSeek Harness.exe");
   if (!existsSync(exe)) fatal("App not found: " + exe);
-  console.log("\nLaunching DeepSeek Harness...");
+  console.log("");
+  console.log("Launching DeepSeek Harness...");
   const child = spawn(exe, [], { cwd: appDir, detached: true, stdio: "ignore" });
   child.unref();
   console.log("OK  launched (window takes a few seconds to load)");
@@ -190,6 +210,7 @@ function copyDir(src: string, dest: string): void {
 async function main(): Promise<void> {
   const a = args();
   check();
+  const noLaunch = a['no-launch'] === 'true';
   const url = a.url || DEFAULT_URL;
   const targetDir = resolve(a.dir || join(homedir(), "DeepSeekHarness"));
   mkdirSync(targetDir, { recursive: true });
@@ -198,7 +219,14 @@ async function main(): Promise<void> {
   unzip(tmpZip, targetDir);
   rmSync(tmpZip, { force: true });
   relink(targetDir);
-  initAndLaunch(targetDir);
+  initProfile(targetDir);
+  if (noLaunch) {
+    console.log("OK  installed (--no-launch: skipped app launch)");
+    console.log("App dir: " + targetDir);
+    console.log("Profile home: " + INSTALL_HOME);
+    return;
+  }
+  launchApp(targetDir);
 }
 
 main().catch((e) => fatal(String((e && (e as Error).message) || e)));

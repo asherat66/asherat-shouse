@@ -14,8 +14,10 @@ const os = require("node:os");
 exports.name = "dsh-autofix";
 exports.inject = [];
 
-const HOME = process.env.DSH_HOME || os.homedir();
-const PROFILE_NM = path.join(HOME, ".dsh", "profiles", "web", "node_modules");
+// dsh home 语义: 显式 DSH_HOME 即数据根; 未设置时默认 ~/.dsh
+const DSHE = (process.env.DSH_HOME || "").trim();
+const HOME = DSHE !== "" ? DSHE : path.join(os.homedir(), ".dsh");
+const PROFILE_NM = path.join(HOME, "profiles", "web", "node_modules");
 const DSH_TREE = process.cwd(); // dsh 启动 cwd = DSH_ROOT
 const PATCHES = path.join(__dirname, "..", "patches");
 
@@ -51,7 +53,9 @@ const ADAPTER_FN =
   "  if (system === void 0) return system\n" +
   "  if (system.includes('Create a concise title')) return system\n" +
   "  try {\n" +
-  "    const p = __grJoin(process.env.DSH_HOME || __grHd(), '.dsh', 'AGENTS.md')\n" +
+  "    const dh = (process.env.DSH_HOME || '').trim()\n" +
+  "    const base = dh !== '' ? dh : __grJoin(__grHd(), '.dsh')\n" +
+  "    const p = __grJoin(base, 'AGENTS.md')\n" +
   "    if (!__grEf(p)) return system\n" +
   "    const extra = __grRf(p, 'utf8')\n" +
   "    if (extra.trim() === '') return system\n" +
