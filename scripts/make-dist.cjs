@@ -68,18 +68,6 @@ console.log('scanned:', links.length, 'links | staging:', STAGING);
 if (!SKIP_PROFILE && fs.existsSync(PROFILE_SRC)) {
   const PROFILE_STAGING = path.join(STAGING, '.install', 'profile');
   fs.mkdirSync(PROFILE_STAGING, { recursive: true });
-  // 清理 package.json 中的本机 file: 路径(发布版改为 bundled 标记)
-  try {
-    const pkgPath = path.join(PROFILE_SRC, 'package.json');
-    if (fs.existsSync(pkgPath)) {
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-      for (const k of Object.keys(pkg.dependencies || {})) {
-        const v = pkg.dependencies[k];
-        if (typeof v === 'string' && v.startsWith('file:')) pkg.dependencies[k] = 'bundled';
-      }
-            fs.writeFileSync(path.join(PROFILE_STAGING, 'package.json'), JSON.stringify(pkg, null, 2) + String.fromCharCode(10), 'utf8');
-    }
-  } catch { /* 保留原样 */ }
   // 用同 walk 逻辑复制 profile(跳过 junction? profile 内可能也有 .pnpm)
   function walkProfile(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -93,6 +81,18 @@ if (!SKIP_PROFILE && fs.existsSync(PROFILE_SRC)) {
     }
   }
   walkProfile(PROFILE_SRC);
+  // 清理 package.json 中的本机 file: 路径(发布版改为 bundled 标记) — 必须在复制之后
+  try {
+    const pkgPath = path.join(PROFILE_STAGING, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      for (const k of Object.keys(pkg.dependencies || {})) {
+        const v = pkg.dependencies[k];
+        if (typeof v === 'string' && v.startsWith('file:')) pkg.dependencies[k] = 'bundled';
+      }
+      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + String.fromCharCode(10), 'utf8');
+    }
+  } catch { /* 保留原样 */ }
   if (fs.existsSync(AGENTS_SRC)) {
     fs.mkdirSync(path.join(STAGING, '.install'), { recursive: true });
     fs.copyFileSync(AGENTS_SRC, path.join(STAGING, '.install', 'AGENTS.md'));
