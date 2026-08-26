@@ -14,8 +14,8 @@ import { inflateRawSync } from "node:zlib";
 // 发行资产名:   dsh-desktop.v<版本>.win-x64.zip   (由 scripts/make-dist.cjs 生成)
 const DIST_OWNER = "asherat66";              // GitHub 账号
 const DIST_REPO = "asherat-shouse";          // 发布仓库(与 GitHub 仓库名一致)
-const DIST_TAG = "v0.1.3";                   // 发布 tag(发新版时与 DIST_ARCHIVE 同步更新)
-const DIST_ARCHIVE = "dsh-desktop.v0.1.3.win-x64.zip";
+const DIST_TAG = "v0.1.4";                   // 发布 tag(发新版时与 DIST_ARCHIVE 同步更新)
+const DIST_ARCHIVE = "dsh-desktop.v0.1.4.win-x64.zip";
 // 优先级: --url 参数 > 环境变量 DSH_DIST_URL > 上方配置拼出的 GitHub 地址
 const DEFAULT_URL =
   "https://github.com/" + DIST_OWNER + "/" + DIST_REPO + "/releases/download/" +
@@ -59,50 +59,95 @@ function check(): void {
   console.log("OK  environment OK (Windows x64, C: free " + human(freeBytes) + ")");
 }
 
-// 2. download with progress bar — 带断点续传 + 自动重试(网络抖动不中断安装)
-const DL_RETRIES = 3;
+// 2. download with progress bar — 时间驱动刷新(低速率下也能看到动) + 速率/ETA +
+//    断点续传 + 镜像源自动回退(直连 GitHub 慢/挂时切 gh-proxy 等国内镜像)。
+const DL_RETRIES = 4; // 更多重试 = 更多源机会
+function mirrorUrls(url: string): string[] {
+  // 镜像格式: https://<mirror>/https://github.com/... (保留原 URL 去掉协议头)
+  const body = url.replace(/^https:\/\//i, "");
+  return [
+    url,
+    "https://gh-proxy.com/https://" + body,
+    "https://ghfast.top/https://" + body,
+  ];
+}
+function hasSystemProxy(): boolean {
+  try {
+    const out = execSync('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable', { encoding: "utf8" });
+    return /0x1\b/.test(out) || /ProxyEnable\s+REG_DWORD\s+0x1/i.test(out);
+  } catch { return false; }
+}
 async function download(url: string, dest: string): Promise<void> {
+  const sources = mirrorUrls(url);
+  // 检测到系统代理时(安装器自带 fetch 不读取系统代理),直连 GitHub 大概率不通,
+  // 直接把镜像源排到前面; 无代理时直连优先(海外快)。
+  const order = hasSystemProxy() ? [1, 2, 0] : [0, 1, 2];
   for (let attempt = 1; attempt <= DL_RETRIES; attempt++) {
+    const srcIdx = order[(attempt - 1) % order.length];
+    const src = sources[srcIdx];
     try {
-      console.log("\nDownloading dist package:\n  " + url + (attempt > 1 ? `  (attempt ${attempt}/${DL_RETRIES})` : ""));
+      console.log("\nDownloading dist package:\n  " + src + (attempt > 1 ? `  (attempt ${attempt}/${DL_RETRIES})` : ""));
       const existing = existsSync(dest) ? statSync(dest).size : 0;
       const headers: Record<string, string> = {};
       if (existing > 0) headers["Range"] = "bytes=" + existing + "-";
-      const res = await fetch(url, { redirect: "follow", headers });
+      // 首块前等待限制: 15s 内必须有响应头, 否则视为渠道不通
+      const resPromise = fetch(src, { redirect: "follow", headers });
+      const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error("network timeout (no response in 15s)")), 15000));
+      const res = await Promise.race([resPromise, timeout]);
       if (!res.ok || !res.body) throw new Error("HTTP " + res.status + " " + res.statusText);
       const total = Number(res.headers.get("content-length") || "0") + (res.status === 206 ? existing : 0);
       const out = createWriteStream(dest, { flags: existing > 0 ? "a" : "w" });
       const reader = (res.body as ReadableStream<Uint8Array>).getReader();
       let done = existing;
-      const bar = (force = false): void => {
-        const pct = total > 0 ? ((done / total) * 100).toFixed(1) : "?";
-        const filled = Math.min(30, Math.floor((done / Math.max(1, total)) * 30));
-        const line = "  [" + "=".repeat(filled).padEnd(30, " ") + "] " + pct + "%  " + human(done) + "/" + (total ? human(total) : "?");
-        process.stdout.write("\r" + line.padEnd(70));
-        if (force) process.stdout.write("\n");
-      };
+      const t0 = Date.now();
+      let last = t0, lastDone = done, lastPaint = 0;
+      let stallCheck = t0;
       while (true) {
         const { done: d, value } = await reader.read();
+        if (done === 0 && d) break; // 已完成
+        if (value && value.length) {
+          done += value.length;
+          out.write(Buffer.from(value));
+          stallCheck = Date.now();
+        }
         if (d) break;
-        if (value && value.length) { done += value.length; out.write(Buffer.from(value)); bar(); }
+        // 时间驱动渲染: 每 150ms 一次(块小/网慢时也不会看起来卡死)
+        const now = Date.now();
+        if (now - lastPaint >= 150) {
+          lastPaint = now;
+          const pct = total > 0 ? ((done / total) * 100).toFixed(1) : "?";
+          const filled = Math.min(30, Math.floor((done / Math.max(1, total)) * 30));
+          const elapsed = Math.max(1, now - last);
+          const rate = (done - lastDone) / (elapsed / 1000);
+          const eta = rate > 1 && total > 0 ? Math.round((total - done) / rate) : 0;
+          const etaTxt = eta > 0 ? " ETA " + Math.floor(eta / 60) + "m" + (eta % 60) + "s" : "";
+          const line = "  [" + "=".repeat(filled).padEnd(30, " ") + "] " + pct + "%  " +
+            human(done) + "/" + (total ? human(total) : "?") +
+            (rate > 0.5 ? "  " + (rate / 1024 / 1024).toFixed(1) + " MB/s" : "") + etaTxt;
+          process.stdout.write("\r" + line.padEnd(76));
+          last = now; lastDone = done;
+        }
+        // 25s 无进展 -> 抛弃该源(切镜像/重试)
+        if (Date.now() - stallCheck > 25000) throw new Error("stalled (no data for 25s)");
       }
       out.end();
       await new Promise<void>((r) => out.on("finish", () => r()));
-      console.log("OK  downloaded " + human(done));
+      console.log("\nOK  downloaded " + human(done));
       return;
     } catch (e) {
-      console.log("\n  download error: " + ((e as Error).message || e));
+      try { rmSync(dest, { force: true }); } catch {} // 源更换后放弃半成品, 下次从 0 或断点
+      console.log("\n  download error(" + srcIdx + "): " + ((e as Error).message || e));
       if (attempt === DL_RETRIES) {
         fatal(
           "Download failed after " + DL_RETRIES + " attempts: " + ((e as Error).message || e) +
           "\n  排查建议:" +
-          "\n  1) 网络不佳时用国内镜像: dsh-installer.exe --url <镜像URL>/dsh-desktop.v<版本>.win-x64.zip" +
-          "\n  2) 挂代理后重试(安装器不读系统代理,可在终端设置 HTTPS_PROXY 环境变量)" +
-          "\n  3) 断点续传已内置: 再次运行会从已下载部分继续"
+          "\n  1) 网络受限时: 把镜像 URL 存下载文件后执行 dsh-installer.exe --url <本机文件路径或镜像URL>" +
+          "\n  2) 断点续传已内置: 再次运行会从已下载部分继续" +
+          "\n  3) 已内置国内镜像回退(gh-proxy/ghfast); 若仍失败请手动下载 zip 或更换网络"
         );
       }
-      console.log("  retrying in " + (3 * attempt) + "s...");
-      await new Promise<void>((r) => setTimeout(r, 3000 * attempt));
+      console.log("  retrying next source in " + (2 * attempt) + "s...");
+      await new Promise<void>((r) => setTimeout(r, 2000 * attempt));
     }
   }
 }

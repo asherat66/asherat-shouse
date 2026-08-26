@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-desktop",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "DeepSeek Harness 桌面版 - 由 Electron 包装的 dsh Web UI",
   "license": "MIT",
   "author": "DeepSeek Harness Desktop",

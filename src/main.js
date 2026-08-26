@@ -19,13 +19,51 @@ const NODE_EXE =
     ? path.join(resourcesPath, 'node', process.platform === 'win32' ? 'node.exe' : 'node')
     : process.execPath; // Electron 主进程的 node 仅作开发回退,生产会嵌入独立 node.exe
 
-const PORT = Number(process.env.DSH_PORT || 3080); // 支持多实例/端口隔离(DSH_PORT)
+const PORT = process.env.DSH_TEST_MODE === '1'
+  ? 3081 // 测试专用(隔离实例)
+  : Number(process.env.DSH_PORT || 3080); // 支持多实例/测试隔离
 const HOST = '127.0.0.1';
 const READY_TIMEOUT_MS = 120000;
 
 let mainWindow = null;
 let dshProcess = null;
 let serverReady = false;
+
+// 绿色包自愈: junction(zip/移动后)目标可能失效,按 manifest.links.json 重建。
+// WinRAR 等工具解压 zip 时 junction 无法还原,直接双击会启动失败;
+// 这里在每次启动 dsh 前检测样例链接,失效则全量重建(解压/移动后都可自愈)。
+function ensureLinks() {
+  const appRoot = path.resolve(process.resourcesPath, '..'); // 绿色包根(exe 同级)
+  const manifestPath = path.join(appRoot, 'manifest.links.json');
+  if (!fs.existsSync(manifestPath)) return;
+  const sample = path.join(DSH_ROOT, 'apps', 'cli', 'node_modules', '@deepseek-ai', 'dsh-app-boot');
+  try {
+    if (fs.lstatSync(sample).isSymbolicLink() && fs.existsSync(sample)) return; // 链接正常
+  } catch { /* 缺失/断链 -> 重建 */ }
+  let links = [];
+  try { links = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch { return; }
+  let fixed = 0;
+  for (const l of links) {
+    try {
+      const p = path.join(appRoot, l.path.split('/').join(path.sep));
+      let t = String(l.target || '');
+      if (t === '') continue;
+      // 作者打包机的 win-unpacked 绝对路径 -> 改写为本绿色包根
+      const norm = t.replace(/\\/g, '/').toLowerCase();
+      const at = norm.indexOf('win-unpacked/');
+      if (at >= 0) t = path.join(appRoot, t.slice(at + 'win-unpacked/'.length).split('/').join(path.sep));
+      else {
+        const rj = norm.indexOf('resources/');
+        if (rj >= 0) t = path.join(appRoot, t.slice(rj).split('/').join(path.sep));
+      }
+      fs.rmSync(p, { force: true, recursive: false });
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.symlinkSync(t, p, 'junction');
+      fixed++;
+    } catch (e) { /* 单条失败跳过: 其余继续 */ }
+  }
+  if (fixed > 0) console.log('[dsh-desktop] auto-relink:', fixed, 'junctions rebuilt');
+}
 
 function log(...args) {
   console.log('[dsh-desktop]', ...args);
@@ -68,7 +106,9 @@ function startDshServer() {
 
   dshProcess = spawn(NODE_EXE, args, {
     cwd: DSH_ROOT,
-    env: { ...process.env },
+    env: process.env.DSH_TEST_MODE === '1'
+      ? { ...process.env, DSH_HOME: String(process.env.DSH_TEST_HOME || '') }
+      : { ...process.env },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
@@ -212,6 +252,7 @@ if (process.env.DSH_DEBUG === '1') {
 
 app.whenReady().then(async () => {
   try {
+    ensureLinks();
     await startDshServer();
     serverReady = true;
     createWindow();
