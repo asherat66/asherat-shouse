@@ -1,5 +1,90 @@
 # DeepSeek Harness Desktop
 
+## 📦 简体中文安装说明（Windows）
+
+> DeepSeek Harness 桌面版：Electron 封装的 dsh Web UI，**无需安装 Node.js**（已内置独立运行时）。
+
+### 系统要求
+
+| 项目 | 要求 |
+|---|---|
+| 系统 | Windows 10 / 11（64 位） |
+| 磁盘 | 至少 4 GB 可用空间（安装后约 2 GB） |
+| 网络 | 首次下载发行包约 650 MB；需要能访问 GitHub（国内慢可挂代理/镜像） |
+
+### 方式一：一键安装器（推荐）
+
+1. 下载 **`dsh-installer.exe`**（来自 GitHub Releases 页面的资产）
+2. **双击运行**，安装器自动完成：
+   - 环境检测（Windows x64 / 磁盘空间）
+   - 下载发行包（**带进度条**：百分比 + 已下载量）
+   - 解压 + 重建目录链接（约 3 分钟）
+   - 初始化配置文件（自带全部插件与规则）
+   - 自动启动 DeepSeek Harness
+3. 首次使用：打开 **设置 → 模型**，填写你的 **DeepSeek API Key**（仅保存在本机 `~\.dsh\.credentials.yaml`）
+4. 完成，开始使用
+
+> 自定义安装目录：`dsh-installer.exe --dir D:\DeepSeekHarness`
+> 自定义下载源（如镜像）：`dsh-installer.exe --url https://镜像地址/...zip`
+
+### 方式二：绿色免安装包
+
+1. 下载 **`dsh-desktop.v<版本>.win-x64.zip`**
+2. 解压到任意目录（**解压时用系统"全部解压"或 tar，不要用会丢符号链接的工具**）
+3. 若解压后**移动过目录**，运行一次目录修复：`node scripts/relink.cjs <目录路径>`（需要 Node.js，仅此一步需要；不移动则免）
+4. 双击 `DeepSeek Harness.exe` 启动 → 设置 → 模型 → 填 API Key
+
+### 方式三：从源码构建（开发者）
+
+**前置**：Windows x64、Node.js 22+、pnpm 11+、git、Python 3（可选，仅生成图标）
+
+```bash
+# 1. 克隆本仓库与 dsh 主仓库（相邻目录）
+git clone <本仓库地址> desktop
+git clone https://github.com/deepseek-ai/deepseek-harness dsh
+
+# 2. 构建 dsh（先打 General Rules 补丁，保证规则注入机制生效）
+node desktop/scripts/patch-dsh-llm.cjs dsh
+cd dsh && pnpm install --frozen-lockfile && pnpm run build && cd ..
+
+# 3. 桌面端依赖 + 组装资源（拷贝 dsh 代码库 + 独立 Node 运行时）
+cd desktop
+npm install
+DSH_SRC=../dsh node scripts/assemble-resources.cjs
+
+# 4. 一键安装内置插件 + 初始化规则（设置页/版本更新/prompt copy/autofix）
+node scripts/install-plugins.cjs
+
+# 5. 运行（开发）或打包
+npm start                    # 开发模式
+npm run pack:dir             # 生成绿色版 dist/win-unpacked
+node scripts/make-dist.cjs   # （可选）生成可分发的发行 zip（约 8-15 分钟）
+```
+
+### 首次使用
+
+1. 打开应用 → **设置 → 模型** → 填写 DeepSeek API Key（DeepSeek 开放平台申请）
+2. 推荐体验：
+   - **设置 → 版本更新**：一键检查 dsh 主仓库新版本
+   - **设置 → General Rules**：全局最高优先级规则（改"老大"称呼、回复风格等；保存后下一条消息即生效）
+   - **输入框旁 prompt copy**：嵌入 jiro.build 风格 Prompt 库（做网页 / 做 PPT 自动转换）
+
+### 常见问题
+
+| 问题 | 解决 |
+|---|---|
+| 提示"启动失败" | 检查端口 3080 是否被占用；看 `app_stdout.log` |
+| 杀毒软件拦截 | 允许运行（应用未签名） |
+| 下载慢 | 用 `--url` 指向国内镜像，或代理后重试 |
+| 更新第三方插件后功能失效 | **无需处理**：每次启动 `dsh-autofix` 自动重打全部补丁 |
+| 发图片模型不识别 | 确认输入框出现图片缩略卡；仍不行看 General Rules 是否误改成禁用视觉 |
+
+### 许可证
+
+MIT（本项目）+ MIT（上游 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)）。
+
+---
+
 Electron desktop wrapper for the DeepSeek Harness (dsh) Web UI.
 
 ## Features
