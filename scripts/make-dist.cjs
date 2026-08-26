@@ -45,6 +45,8 @@ function walk(dir) {
     const s = path.join(dir, entry.name);
     const d = path.join(STAGING, rel(s));
     const st = fs.lstatSync(s);
+    // 运行时日志(Electron 每次启动自动生成, 非功能资源): 打包时排除, 避免泄露构建机信息
+    if ((entry.name === 'app_stdout.log' || entry.name === 'app_stderr.log') && st.isFile()) continue;
     if (st.isSymbolicLink()) {
       const target = stripVerbatim(fs.readlinkSync(s));
       // target 可能在包内/包外;记录原样,安装器再做解析(包内转相对)
@@ -110,9 +112,9 @@ if (fs.existsSync(outZip)) fs.rmSync(outZip);
 const SEVEN_ZIP = path.join(process.env.LOCALAPPDATA, 'electron-builder', 'Cache', '7zip@1.0.0', '7zip-win-x64-a34pt', 'bin', '7za.exe');
 const use7z = fs.existsSync(SEVEN_ZIP);
 if (use7z) {
-  execFileSync(SEVEN_ZIP, ['a', '-tzip', '-mx=5', '-mmt=on', outZip, '.'], { cwd: STAGING, stdio: 'inherit' });
+  execFileSync(SEVEN_ZIP, ['a', '-tzip', '-mx=5', '-mmt=on', '-xr!app_stdout.log', '-xr!app_stderr.log', outZip, '.'], { cwd: STAGING, stdio: 'inherit' });
 } else {
-  execFileSync('C:\Windows\System32\tar.exe', ['--options', 'zip:compression=deflate', '-a', '-cf', outZip, '.'], { cwd: STAGING, stdio: 'inherit' });
+  execFileSync('C:\Windows\System32\tar.exe', ['--exclude=app_stdout.log', '--exclude=app_stderr.log', '--options', 'zip:compression=deflate', '-a', '-cf', outZip, '.'], { cwd: STAGING, stdio: 'inherit' });
 }
 const sz = fs.statSync(outZip).size;
 console.log('DONE:', outZip, '(', (sz / 1024 / 1024).toFixed(1), 'MB )');

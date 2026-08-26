@@ -1,7 +1,7 @@
 // dsh-installer — single-file installer (Windows x64)
 // usage: dsh-installer.exe [--url <dist-url>] [--dir <install-dir>] [--silent]
 // flow: check -> download(progress) -> unzip -> relink -> init profile -> launch
-import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, createWriteStream, symlinkSync, readlinkSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, createWriteStream, statSync, symlinkSync, readlinkSync, readdirSync } from "node:fs";
 import { join, resolve, dirname, sep, isAbsolute } from "node:path";
 import { homedir, platform, arch } from "node:os";
 
@@ -12,10 +12,10 @@ import { inflateRawSync } from "node:zlib";
 // ═══ 发布配置（发布前只需改这里）═══
 // GitHub 仓库:  https://github.com/<OWNER>/deepseek-harness-desktop
 // 发行资产名:   dsh-desktop.v<版本>.win-x64.zip   (由 scripts/make-dist.cjs 生成)
-const DIST_OWNER = "asherat66";              // ← 发布前改为真实 GitHub 账号
-const DIST_REPO = "deepseek-harness-desktop";
-const DIST_TAG = "latest";                 // 或固定版本 tag: v0.1.1
-const DIST_ARCHIVE = "dsh-desktop.v0.1.1.win-x64.zip";
+const DIST_OWNER = "asherat66";              // GitHub 账号
+const DIST_REPO = "asherat-shouse";          // 发布仓库(与 GitHub 仓库名一致)
+const DIST_TAG = "v0.1.3";                   // 发布 tag(发新版时与 DIST_ARCHIVE 同步更新)
+const DIST_ARCHIVE = "dsh-desktop.v0.1.3.win-x64.zip";
 // 优先级: --url 参数 > 环境变量 DSH_DIST_URL > 上方配置拼出的 GitHub 地址
 const DEFAULT_URL =
   "https://github.com/" + DIST_OWNER + "/" + DIST_REPO + "/releases/download/" +
@@ -59,30 +59,52 @@ function check(): void {
   console.log("OK  environment OK (Windows x64, C: free " + human(freeBytes) + ")");
 }
 
-// 2. download with progress bar
+// 2. download with progress bar — 带断点续传 + 自动重试(网络抖动不中断安装)
+const DL_RETRIES = 3;
 async function download(url: string, dest: string): Promise<void> {
-  console.log("\nDownloading dist package:\n  " + url);
-  const res = await fetch(url, { redirect: "follow" });
-  if (!res.ok || !res.body) fatal("Download failed: HTTP " + res.status + " " + res.statusText);
-  const total = Number(res.headers.get("content-length") || "0");
-  const out = createWriteStream(dest);
-  const reader = (res.body as ReadableStream<Uint8Array>).getReader();
-  let done = 0;
-  const bar = (force = false): void => {
-    const pct = total > 0 ? ((done / total) * 100).toFixed(1) : "?";
-    const filled = Math.min(30, Math.floor((done / Math.max(1, total)) * 30));
-    const line = "  [" + "=".repeat(filled).padEnd(30, " ") + "] " + pct + "%  " + human(done) + "/" + (total ? human(total) : "?");
-    process.stdout.write("\r" + line.padEnd(70));
-    if (force) process.stdout.write("\n");
-  };
-  while (true) {
-    const { done: d, value } = await reader.read();
-    if (d) break;
-    if (value && value.length) { done += value.length; out.write(Buffer.from(value)); bar(); }
+  for (let attempt = 1; attempt <= DL_RETRIES; attempt++) {
+    try {
+      console.log("\nDownloading dist package:\n  " + url + (attempt > 1 ? `  (attempt ${attempt}/${DL_RETRIES})` : ""));
+      const existing = existsSync(dest) ? statSync(dest).size : 0;
+      const headers: Record<string, string> = {};
+      if (existing > 0) headers["Range"] = "bytes=" + existing + "-";
+      const res = await fetch(url, { redirect: "follow", headers });
+      if (!res.ok || !res.body) throw new Error("HTTP " + res.status + " " + res.statusText);
+      const total = Number(res.headers.get("content-length") || "0") + (res.status === 206 ? existing : 0);
+      const out = createWriteStream(dest, { flags: existing > 0 ? "a" : "w" });
+      const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+      let done = existing;
+      const bar = (force = false): void => {
+        const pct = total > 0 ? ((done / total) * 100).toFixed(1) : "?";
+        const filled = Math.min(30, Math.floor((done / Math.max(1, total)) * 30));
+        const line = "  [" + "=".repeat(filled).padEnd(30, " ") + "] " + pct + "%  " + human(done) + "/" + (total ? human(total) : "?");
+        process.stdout.write("\r" + line.padEnd(70));
+        if (force) process.stdout.write("\n");
+      };
+      while (true) {
+        const { done: d, value } = await reader.read();
+        if (d) break;
+        if (value && value.length) { done += value.length; out.write(Buffer.from(value)); bar(); }
+      }
+      out.end();
+      await new Promise<void>((r) => out.on("finish", () => r()));
+      console.log("OK  downloaded " + human(done));
+      return;
+    } catch (e) {
+      console.log("\n  download error: " + ((e as Error).message || e));
+      if (attempt === DL_RETRIES) {
+        fatal(
+          "Download failed after " + DL_RETRIES + " attempts: " + ((e as Error).message || e) +
+          "\n  排查建议:" +
+          "\n  1) 网络不佳时用国内镜像: dsh-installer.exe --url <镜像URL>/dsh-desktop.v<版本>.win-x64.zip" +
+          "\n  2) 挂代理后重试(安装器不读系统代理,可在终端设置 HTTPS_PROXY 环境变量)" +
+          "\n  3) 断点续传已内置: 再次运行会从已下载部分继续"
+        );
+      }
+      console.log("  retrying in " + (3 * attempt) + "s...");
+      await new Promise<void>((r) => setTimeout(r, 3000 * attempt));
+    }
   }
-  out.end();
-  await new Promise<void>((r) => out.on("finish", () => r()));
-  console.log("OK  downloaded " + human(done));
 }
 
 // 3. minimal zip extraction (deflate/store) — no external deps
@@ -218,6 +240,10 @@ async function main(): Promise<void> {
   await download(url, tmpZip);
   unzip(tmpZip, targetDir);
   rmSync(tmpZip, { force: true });
+  // 防御性清理: 发行包可能带入作者机器上的运行日志(Electron 每次启动会在 exe 目录
+  // 重新生成这两个文件, 打包残留件无任何功能作用, 只泄露构建机信息)
+  rmSync(join(targetDir, "app_stdout.log"), { force: true });
+  rmSync(join(targetDir, "app_stderr.log"), { force: true });
   relink(targetDir);
   initProfile(targetDir);
   if (noLaunch) {
