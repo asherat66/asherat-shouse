@@ -5,6 +5,8 @@ const { spawn } = require('node:child_process');
 const path = require('node:path');
 const http = require('node:http');
 const fs = require('node:fs');
+const os = require('node:os');
+const { ensureProfile } = require('./ensure-profile.cjs');
 
 // 打包后:resources/node(独立 node.exe)、resources/dsh(代码库)
 // 开发期:electron . 时无 resources,回退到 repos 根目录 + 系统 node。
@@ -67,6 +69,13 @@ function ensureLinks() {
 
 function log(...args) {
   console.log('[dsh-desktop]', ...args);
+}
+
+// 与 startDshServer 注入 dsh 子进程的 DSH_HOME 保持一致(测试模式=DSH_TEST_HOME,
+// 否则 env DSH_HOME 或默认 ~/.dsh —— 即 dsh-home-paths resolveDshHome 的语义)。
+function profileHome() {
+  if (process.env.DSH_TEST_MODE === '1') return process.env.DSH_TEST_HOME || '';
+  return process.env.DSH_HOME || path.join(os.homedir(), '.dsh');
 }
 
 function waitForServer(timeoutMs) {
@@ -253,6 +262,12 @@ if (process.env.DSH_DEBUG === '1') {
 app.whenReady().then(async () => {
   try {
     ensureLinks();
+    // 绿包与安装器对齐: 新用户首次启动初始化插件 profile(幂等, 见 ensure-profile.cjs)
+    ensureProfile({
+      appRoot: path.resolve(process.resourcesPath, '..'),
+      home: profileHome(),
+      log,
+    });
     await startDshServer();
     serverReady = true;
     createWindow();
