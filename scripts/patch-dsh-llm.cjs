@@ -34,7 +34,7 @@ function withGlobalRules(system: string | undefined): string | undefined {
     if (!__grEf(p)) return system
     const extra = __grRf(p, 'utf8')
     if (extra.trim() === '') return system
-    return system + '\n\n' + extra
+    return system + '\\n\\n' + extra
   } catch { return system }
 }
 
@@ -45,8 +45,10 @@ const pos = insertAt >= 0 ? insertAt : 0;
 d = d.slice(0, pos) + '\n' + helper + d.slice(pos);
 
 // 2) 替换两个序列化函数的 system push
-// 通用模式(两种写法): options.system !== void 0 的 push → 用 withGlobalRules
-const pushPattern = /if \(options\.system !== void 0\) messages\.push\(\{[\s\S]*?content: options\.system[\s\S]*?\}\}\);/g;
+// 兼容两种写法:
+//   旧: if (options.system !== void 0) messages.push({...});            (单行)
+//   新: if (options.system !== undefined) { messages.push({...}) }      (块式)
+const pushPattern = /if \(options\.system !== (?:void 0|undefined)\)\s*\{?\s*messages\.push\(\{[\s\S]{0,160}?content: options\.system[\s\S]{0,160}?\}\);?\s*\}?/g;
 let count = 0;
 d = d.replace(pushPattern, (m) => {
   count++;
