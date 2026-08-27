@@ -85,7 +85,6 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist\release | Out-Null
-          Copy-Item dist\release\dsh-installer.exe dist\release\dsh-installer.exe -Force
           Get-ChildItem dist\release
 
       - name: Create GitHub Release & upload assets
