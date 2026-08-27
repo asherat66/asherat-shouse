@@ -114,7 +114,7 @@ const use7z = fs.existsSync(SEVEN_ZIP);
 if (use7z) {
   execFileSync(SEVEN_ZIP, ['a', '-tzip', '-mx=5', '-mmt=on', '-xr!app_stdout.log', '-xr!app_stderr.log', outZip, '.'], { cwd: STAGING, stdio: 'inherit' });
 } else {
-  execFileSync('C:\Windows\System32\tar.exe', ['--exclude=app_stdout.log', '--exclude=app_stderr.log', '--options', 'zip:compression=deflate', '-a', '-cf', outZip, '.'], { cwd: STAGING, stdio: 'inherit' });
+  execFileSync(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe'), ['--exclude=app_stdout.log', '--exclude=app_stderr.log', '--options', 'zip:compression=deflate', '-a', '-cf', outZip, '.'], { cwd: STAGING, stdio: 'inherit' });
 }
 const sz = fs.statSync(outZip).size;
 console.log('DONE:', outZip, '(', (sz / 1024 / 1024).toFixed(1), 'MB )');
