@@ -1,0 +1,35 @@
+{
+  "$comment": "Shipped profile 清单 —— CI 用 build-shipped-profile.cjs 重建作者插件环境(不再依赖作者本机 ~/.dsh)。bundles 与 dependencies 与作者 ~/.dsh/profiles/web/package.json 对齐;file: 插件改为仓库 plugins/ 相对路径;tarball 改直连 codeload(GitHub Actions 内网稳定,gh-proxy 仅国内中转)。",
+  "profile": {
+    "dependencies": {
+      "@opendsh/dsh-plugin-setting-mcp": "^0.1.2",
+      "dsh-autofix": "file:./plugins/dsh-autofix",
+      "dsh-cost-meter": "^1.5.42",
+      "dsh-file-drop": "https://codeload.github.com/dannyvan/dsh-file-drop/tar.gz/afa3ce99a6a167fb17ff65a1a4030d887d2869db",
+      "dsh-file-upload": "^0.4.3",
+      "dsh-general-rules": "file:./plugins/dsh-general-rules",
+      "dsh-plugin-image-input": "^0.1.1",
+      "dsh-prompt-copy": "file:./plugins/dsh-prompt-copy",
+      "dsh-skill-manager-ytxue": "https://codeload.github.com/YTxue/dsh-skill-manager-ytxue/tar.gz/f254f3005a446062e312144f27ed0820d38d4654",
+      "dsh-update-checker": "file:./plugins/dsh-update-checker",
+      "dshmarket": "^1.22.0"
+    },
+    "bundles": [
+      "@deepseek-ai/dsh-base",
+      "@deepseek-ai/dsh-web-app",
+      "dshmarket",
+      "dsh-file-upload",
+      "dsh-cost-meter",
+      "dsh-skill-manager-ytxue",
+      "dsh-plugin-image-input",
+      "dsh-file-drop",
+      "@opendsh/dsh-plugin-setting-mcp",
+      "dsh-update-checker",
+      "dsh-general-rules",
+      "dsh-prompt-copy",
+      "dsh-autofix"
+    ]
+  },
+  "pluginsDir": "plugins",
+  "agentsFile": "AGENTS.md"
+}

@@ -18,8 +18,14 @@ const SRC = process.argv.includes('--src') ? process.argv[process.argv.indexOf('
 const OUT_DIR_ARG = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : path.join(DESKTOP, 'dist', 'release');
 const SKIP_PROFILE = process.argv.includes('--skip-profile');
 const HOME = process.env.USERPROFILE || process.env.HOME;
-const PROFILE_SRC = path.join(HOME, '.dsh', 'profiles', 'web');
-const AGENTS_SRC = path.join(HOME, '.dsh', 'AGENTS.md');
+// 值选项: --profile-src <dir> —— CI 用 build-shipped-profile.cjs 的产物(<dir>/{profile,AGENTS.md});
+// 未传时回退作者本机 ~/.dsh(v0.1.5 静默跳过的根因: CI 本机不存在该目录, 现在改为显式失败)。
+const PROFILE_ROOT = (() => {
+  const i = process.argv.indexOf('--profile-src');
+  return i >= 0 ? path.resolve(process.argv[i + 1]) : null;
+})();
+const PROFILE_SRC = PROFILE_ROOT ? path.join(PROFILE_ROOT, 'profile') : path.join(HOME, '.dsh', 'profiles', 'web');
+const AGENTS_SRC = PROFILE_ROOT ? path.join(PROFILE_ROOT, 'AGENTS.md') : path.join(HOME, '.dsh', 'AGENTS.md');
 
 if (!fs.existsSync(SRC)) { console.error('源目录不存在:', SRC); process.exit(1); }
 
@@ -67,22 +73,38 @@ fs.writeFileSync(path.join(STAGING, 'manifest.links.json'), JSON.stringify(links
 console.log('scanned:', links.length, 'links | staging:', STAGING);
 
 // ── 2) profile 导出(剔除凭据) ──
-if (!SKIP_PROFILE && fs.existsSync(PROFILE_SRC)) {
+if (!SKIP_PROFILE) {
+  if (!fs.existsSync(PROFILE_SRC)) {
+    throw new Error(
+      'profile 源不存在: ' + PROFILE_SRC +
+      ' (作者本机 = 需先初始化 ~/.dsh profile; CI = 必须先跑 build-shipped-profile.cjs 并传 --profile-src。' +
+      '若确实不想带插件环境, 请显式加 --skip-profile)',
+    );
+  }
   const PROFILE_STAGING = path.join(STAGING, '.install', 'profile');
   fs.mkdirSync(PROFILE_STAGING, { recursive: true });
-  // 用同 walk 逻辑复制 profile(跳过 junction? profile 内可能也有 .pnpm)
-  function walkProfile(dir) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  // 用同 walk 逻辑复制 profile(pnpm 结构里大量 junction):
+  // 链接一律展开为实体(客户端不跑 pnpm, 且链接目标多为作者构建机路径 -> 客户端死链);
+  // 目标越出 profile 源树外(如 file: 指向插件源码)也照常复制, 零链接产物最稳。
+  function walkProfile(src, dest) {
+    for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
       if (entry.name === '.credentials.yaml' || entry.name.includes('token') || entry.name.includes('secret')) continue;
-      const s = path.join(dir, entry.name);
-      const d = path.join(PROFILE_STAGING, path.relative(PROFILE_SRC, s).split(path.sep).join('/'));
+      const s = path.join(src, entry.name);
+      const d = path.join(dest, entry.name);
       const st = fs.lstatSync(s);
-      if (st.isSymbolicLink()) { links.push({ path: '.install/profile/' + path.relative(PROFILE_SRC, s).split(path.sep).join('/'), target: stripVerbatim(fs.readlinkSync(s)) }); continue; }
-      if (st.isDirectory()) { fs.mkdirSync(d, { recursive: true }); walkProfile(s); }
+      if (st.isSymbolicLink()) {
+        const t = path.resolve(path.dirname(s), stripVerbatim(fs.readlinkSync(s)));
+        try {
+          if (fs.statSync(t).isDirectory()) walkProfile(t, d);
+          else { fs.mkdirSync(path.dirname(d), { recursive: true }); fs.copyFileSync(t, d); }
+        } catch (e) { console.log('profile link skipped(dangling):', s, '->', t); }
+        continue;
+      }
+      if (st.isDirectory()) { fs.mkdirSync(d, { recursive: true }); walkProfile(s, d); }
       else if (st.isFile()) { fs.mkdirSync(path.dirname(d), { recursive: true }); fs.copyFileSync(s, d); }
     }
   }
-  walkProfile(PROFILE_SRC);
+  walkProfile(PROFILE_SRC, PROFILE_STAGING);
   // 清理 package.json 中的本机 file: 路径(发布版改为 bundled 标记) — 必须在复制之后
   try {
     const pkgPath = path.join(PROFILE_STAGING, 'package.json');

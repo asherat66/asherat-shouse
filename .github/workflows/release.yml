@@ -52,6 +52,12 @@ jobs:
       - name: Install desktop deps
         run: npm install
 
+      # v0.1.5 修复: 重建 shipped profile(不再依赖作者本机 ~/.dsh)——
+      # 4 个自研插件(file:./plugins/*) + npm/tarball 第三方 + AGENTS.md,
+      # 用 hoisted 扁平实体布局(零 junction), 产物 .install-src/{profile,AGENTS.md}。
+      - name: Build shipped profile (plugins + General Rules)
+        run: node scripts/build-shipped-profile.cjs
+
       - name: Assemble resources (dsh + node runtime)
         env:
           DSH_SRC: ${{ github.workspace }}\dsh
@@ -65,7 +71,7 @@ jobs:
           DSH_VERSION: ${{ steps.ver.outputs.version }}
         run: |
           node -e "const p=require('./package.json');p.version=process.env.DSH_VERSION;require('fs').writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
-          node scripts/make-dist.cjs
+          node scripts/make-dist.cjs --profile-src .install-src
 
       - name: Build installer exe
         shell: pwsh
