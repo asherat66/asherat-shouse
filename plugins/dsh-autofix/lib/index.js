@@ -42,26 +42,10 @@ const FU_MARK = "cv.createDraftImages";
 const FU_OLD = fs.readFileSync(path.join(PATCHES, "file-upload.old.txt"), "utf8");
 const FU_NEW = fs.readFileSync(path.join(PATCHES, "file-upload.new.txt"), "utf8");
 
-// 补丁 3: dsh llm adapter General Rules 注入(ESM 安全)
-const ADAPTER_MARK = "__grRf";
-const ADAPTER_HELPER =
-  "import { readFileSync as __grRf, existsSync as __grEf } from 'node:fs';\n" +
-  "import { join as __grJoin } from 'node:path';\n" +
-  "import { homedir as __grHd } from 'node:os';\n";
-const ADAPTER_FN =
-  "\nfunction withGlobalRules(system) {\n" +
-  "  if (system === void 0) return system\n" +
-  "  if (system.includes('Create a concise title')) return system\n" +
-  "  try {\n" +
-  "    const dh = (process.env.DSH_HOME || '').trim()\n" +
-  "    const base = dh !== '' ? dh : __grJoin(__grHd(), '.dsh')\n" +
-  "    const p = __grJoin(base, 'AGENTS.md')\n" +
-  "    if (!__grEf(p)) return system\n" +
-  "    const extra = __grRf(p, 'utf8')\n" +
-  "    if (extra.trim() === '') return system\n" +
-  "    return system + String.fromCharCode(10, 10) + extra\n" +
-  "  } catch { return system }\n" +
-  "}\n";
+// 补丁 3: dsh llm adapter General Rules 注入 —— 已于 v0.1.7 移除:
+// upstream 8/28(0.1.2-alpha.1)起由 @deepseek-ai/dsh-agent-instructions 原生渲染
+// ~/.dsh/AGENTS.md(见 ui-settings 的 AGENTS.md 编辑入口), 旧注入会造成
+// 规则重复 + 与官方 ESM 结构冲突(patch-dsh-llm.cjs 是 v0.1.6 code=1 根因)。
 
 function patchFile(file, mark, applyFn, label) {
   try {
@@ -122,18 +106,7 @@ function apply(_ctx) {
     return d.replace(FU_OLD, FU_NEW);
   }, "file-upload image draft");
 
-  // 3) llm adapter: General Rules 注入
-  const adapter = path.join(DSH_TREE, "packages", "llm", "llm-deepseek", "lib", "index.js");
-  patchFile(adapter, ADAPTER_MARK, (d) => {
-    if (!d.includes("function serializeRequest(options, defaults = {})") || !d.includes('role: "system"')) return null;
-    let next = ADAPTER_HELPER + d;
-    next = next.replace("function serializeRequest(options, defaults = {}) {", ADAPTER_FN + "\nfunction serializeRequest(options, defaults = {}) {");
-    const before = next;
-    next = next.replace(/(\tconst messages = \[\];\n\tif \(options\.system !== void 0\) messages\.push\(\{\n\t\trole: "system",\n\t\tcontent: )options\.system(\n\t\}\);)/g, "$1gsys$2");
-    next = next.replace(/(\tconst messages = \[\];)/g, "\tconst gsys = withGlobalRules(options.system)\n$1");
-    if (next === before || !next.includes("const gsys = withGlobalRules") || !next.includes("content: gsys")) return null;
-    return next;
-  }, "llm adapter General Rules injection");
+  // 3) llm adapter General Rules 注入 —— 已移除(见上方说明, 官方原生接管)
 }
 
 exports.apply = apply;

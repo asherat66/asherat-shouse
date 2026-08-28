@@ -40,9 +40,9 @@ jobs:
       - name: Clone dsh main repo
         run: git clone --depth 1 https://github.com/deepseek-ai/deepseek-harness dsh
 
-      - name: Patch dsh llm adapter (General Rules injection)
-        run: node scripts/patch-dsh-llm.cjs dsh
-
+      # 注: patch-dsh-llm.cjs 已于 v0.1.7 移除 —— upstream 8/28(0.1.2-alpha.1)起
+      # 原生实现 AGENTS.md 注入(agent-instructions), 旧补丁注入 withGlobalRules 会产生
+      # ESM duplicate 声明 -> 启动 code=1(v0.1.6 事故根因之一)。
       - name: Build dsh CLI
         working-directory: dsh
         run: |

@@ -127,12 +127,16 @@ function main() {
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
   log('bundles:', def.profile.bundles.length, '| deps:', Object.keys(def.profile.dependencies).length);
 
-  // 3) pnpm install(node-linker=hoisted: 传统扁平实体布局, 无 .pnpm virtual store、
-  //    无 junction —— 只有零链接树才保证客户端(不跑 pnpm)可用; 默认布局的互链展开会爆炸)
+  // 3) pnpm install
+  //    ⚠️ 不要用 node-linker=hoisted: 官方双锚点解析(先 dsh 安装树, 后 profile 树)下,
+  //       hoisted 把第三方插件的传递依赖(含 60+ 官方 @deepseek-ai/dsh-* npm 包)提升到
+  //       web/node_modules 根层, 屏蔽 CLI 树的安装闭包(profiles/node_modules) ->
+  //       官方 bundle 解析到 npm 版实例 -> ctx 错位 -> 启动 code=1(v0.1.6 事故根因)。
+  //       保留 pnpm 默认布局(.pnpm virtual store), junction 由 make-dist walkProfile 展开为实体。
   //    pnpm 11 默认拒绝依赖生命周期脚本(ERR_PNPM_IGNORED_BUILDS, sharp/tesseract 原生二进
   //    制会缺失)且不再读 package.json 的 pnpm 字段 —— 需要 install -> approve-builds -> install。
   if (!SKIP_INSTALL) {
-    log('pnpm install (node-linker=hoisted) ...');
+    log('pnpm install (default layout, .pnpm store) ...');
     // Windows 下 pnpm 是 .cmd 封装, execFileSync 需经 shell 转发(cmd.exe /bin/sh 均适用)
     const PNPM = process.env.PNPM || 'pnpm';
     const profileDir = path.join(OUT, 'profile');
@@ -147,9 +151,9 @@ function main() {
         return false;
       }
     };
-    pnpmRun(['install', '--node-linker=hoisted'], false);
-    pnpmRun(['approve-builds', '--all']);           // 写入 profile/pnpm-workspace.yaml(仅生成本机)
-    pnpmRun(['install', '--node-linker=hoisted']);  // 命中审批, 原生依赖脚本正式执行
+    pnpmRun(['install'], false);
+    pnpmRun(['approve-builds', '--all']); // 写入 profile/pnpm-workspace.yaml(仅生成本机)
+    pnpmRun(['install']);                 // 命中审批, 原生依赖脚本正式执行
   }
 
   // 4) 展开 symlink -> 实体(客户端零链接)

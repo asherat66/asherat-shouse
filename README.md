@@ -43,8 +43,7 @@
 git clone <本仓库地址> desktop
 git clone https://github.com/deepseek-ai/deepseek-harness dsh
 
-# 2. 构建 dsh（先打 General Rules 补丁，保证规则注入机制生效）
-node desktop/scripts/patch-dsh-llm.cjs dsh
+# 2. 构建 dsh（v0.1.7 起官方已原生注入 ~/.dsh/AGENTS.md，无需补丁）
 cd dsh && pnpm install --frozen-lockfile && pnpm run build && cd ..
 
 # 3. 桌面端依赖 + 组装资源（拷贝 dsh 代码库 + 独立 Node 运行时）
