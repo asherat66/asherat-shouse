@@ -53,19 +53,20 @@ jobs:
       # 必须打在 dsh 源码树 dist(assemble 会复制进绿色包);幂等,锚点不匹配安全中止。
       # bundle 有 hash 文件名,先探测再传(超过一个时取第一个)。
       # 必须用 bash: 默认 pwsh 会展开 $(ls ...) 为其他语义 -> BUNDLE 为空 -> 探测失败。
+      # 注意: checkout 落在仓库根(D:\a\asherat-shouse\asherat-shouse), 插件在 plugins/ 无 desktop/ 前缀。
       - name: Patch web bundle (dsh-raw-html VCP renderer)
         shell: bash
         run: |
           {
             echo "PWD: $PWD"
-            ls -d dsh dsh/apps/web/dist/assets 2>&1 || true
+            ls -d dsh dsh/apps/web/dist/assets plugins/dsh-raw-html/patch 2>&1 || true
             BUNDLE=$(ls dsh/apps/web/dist/assets/index-*.js | head -1)
             echo "BUNDLE: [$BUNDLE]"
             if [ -z "$BUNDLE" ]; then
               echo "::error::no bundle found under dsh/apps/web/dist/assets/"
               exit 1
             fi
-            node desktop/plugins/dsh-raw-html/patch/install-all.cjs "$BUNDLE"
+            node plugins/dsh-raw-html/patch/install-all.cjs "$BUNDLE"
           } 2>&1 | tee patch-diag.log
           exit ${PIPESTATUS[0]}
 
