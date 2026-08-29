@@ -20,3 +20,4 @@ scripts/_test_readlink.cjs
 scripts/flatten-tree.cjs
 scripts/check_icon.py
 scripts/check_pil.py
+dsh/
