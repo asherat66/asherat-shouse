@@ -49,6 +49,14 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
 
+      # v0.1.8: dsh-raw-html 前端渲染补丁(VCP 卡片 HTML 渲染能力)——
+      # 必须打在 dsh 源码树 dist(assemble 会复制进绿色包);幂等,锚点不匹配安全中止。
+      # bundle 有 hash 文件名,先探测再传(超过一个时取第一个)。
+      - name: Patch web bundle (dsh-raw-html VCP renderer)
+        run: |
+          BUNDLE=$(ls dsh/apps/web/dist/assets/index-*.js | head -1)
+          node desktop/plugins/dsh-raw-html/patch/install-all.cjs "$BUNDLE"
+
       - name: Install desktop deps
         run: npm install
 
