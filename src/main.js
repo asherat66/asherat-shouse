@@ -30,6 +30,10 @@ const READY_TIMEOUT_MS = 120000;
 let mainWindow = null;
 let dshProcess = null;
 let serverReady = false;
+// dsh 0.1.2-alpha 起 browser-auth 强制: 每次进程启动生成随机 token, 印在
+// "dsh web: http://127.0.0.1:<port>/?token=..." 一行; 桌面窗必须带 token 加载,
+// 否则白屏 "authentication required"。从子进程 stdout 截获该 URL。
+let dshWebUrl = null;
 
 // 绿色包自愈: junction(zip/移动后)目标可能失效,按 manifest.links.json 重建。
 // WinRAR 等工具解压 zip 时 junction 无法还原,直接双击会启动失败;
@@ -122,7 +126,15 @@ function startDshServer() {
     windowsHide: true,
   });
 
-  dshProcess.stdout.on('data', (d) => process.stdout.write(`[dsh] ${d}`));
+  dshProcess.stdout.on('data', (d) => {
+    process.stdout.write(`[dsh] ${d}`);
+    if (!dshWebUrl) {
+      // 只认 dsh 本机服务行(如 "dsh web: http://127.0.0.1:3080/?token=...")
+      // 插件日志也含 URL(如 file-upload 的 api.openai.com), 必须按 host:port 限定
+      const m = String(d).match(new RegExp(`https?://${HOST}:${PORT}[^\\s]*`));
+      if (m) dshWebUrl = m[0];
+    }
+  });
   dshProcess.stderr.on('data', (d) => process.stderr.write(`[dsh] ${d}`));
 
   dshProcess.on('exit', (code) => {
@@ -142,7 +154,7 @@ function startDshServer() {
   return waitForServer(READY_TIMEOUT_MS);
 }
 
-function createWindow() {
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -158,7 +170,11 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadURL(`http://${HOST}:${PORT}`);
+  // token URL 通常已在 stdout 出现在 waitForServer 完成前; 最多等 3s 后加载
+  for (let i = 0; i < 6 && !dshWebUrl; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  mainWindow.loadURL(dshWebUrl || `http://${HOST}:${PORT}`);
 
   // 外部链接用系统浏览器打开
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

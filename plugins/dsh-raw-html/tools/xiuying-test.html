@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{font-family:'XiuYingV2';src:url('汉仪秀英体简-v2.ttf');font-display:block}
+body{font-family:'XiuYingV2',sans-serif;font-size:32px}
+</style>
+</head>
+<body>
+<div id="t">今天也要元气满满呀</div>
+<script>
+(async function () {
+  var results = {};
+  try { await document.fonts.load('32px "XiuYingV2"', '今天也要元气满满呀'); } catch (e) { results.loadErr = e.message; }
+  results.check = document.fonts.check('32px "XiuYingV2"');
+  results.fonts = [];
+  for (var x of document.fonts) { results.fonts.push(String(x.family) + '|' + x.status); }
+  document.title = JSON.stringify(results);
+})();
+</script>
+</body>
+</html>

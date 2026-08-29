@@ -1,0 +1,30 @@
+<div id="vcp-root" style="background:#f5f5f5;color:#000;font-family:'Lanxi-可宋',system-ui,sans-serif;border-radius:20px;">
+<style>
+@font-face{font-family:'Lanxi-可宋';src:url('/fonts/造字工房最全字体-2016-01-06更新/宋体系列/MFKeSong_Noncommercial-Regular.ttf');font-display:swap}
+@font-face{font-family:'Lanxi-朗宋';src:url('/fonts/造字工房最全字体-2016-01-06更新/宋体系列/MFLangSong_Noncommercial-Regular.ttf');font-display:swap}
+#vcp-root{position:relative;overflow:hidden;padding:48px 44px 40px;box-sizing:border-box;letter-spacing:.01em;line-height:1.85}
+#vcp-root::before{content:"SONG SYSTEM";position:absolute;top:10px;right:-6px;font-size:84px;letter-spacing:.12em;color:#000;opacity:.05;pointer-events:none;font-family:'Lanxi-静黑超细',system-ui,sans-serif}
+#vcp-root .tag{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:#777169;margin:0 0 12px;font-weight:400;font-family:'Lanxi-品宋',serif}
+#vcp-root h1{font-size:32px;font-weight:400;letter-spacing:.02em;margin:0;line-height:1.3;font-family:'Lanxi-朗宋','Lanxi-颜宋',serif}
+#vcp-root .sub{font-size:15px;color:#777169;letter-spacing:.04em;margin:10px 0 0;font-weight:400;font-family:'Lanxi-品宋',serif}
+#vcp-root .rule{height:1px;background:rgba(78,50,23,.12);margin:30px 0 26px}
+#vcp-root h2{font-size:12px;letter-spacing:.26em;color:#4e4e4e;font-weight:600;margin:0 0 14px;font-family:'Lanxi-品宋',serif}
+#vcp-root .item{display:flex;gap:12px;align-items:flex-start;margin:0 0 12px;font-size:15px;font-weight:400;font-family:'Lanxi-可宋',serif}
+#vcp-root .dot{width:7px;height:7px;border-radius:50%;flex:none;margin-top:9px}
+#vcp-root .item b{font-weight:400;color:#000}
+#vcp-root .item span{color:#4e4e4e}
+#vcp-root .cta{display:inline-block;background:#000;color:#fff;font-size:12px;font-weight:700;letter-spacing:.22em;padding:13px 26px 13px 30px;border-radius:9999px;font-family:'Lanxi-品宋',serif}
+#vcp-root .foot{font-size:12px;color:#777169;margin:22px 0 0;letter-spacing:.05em;font-weight:400;font-family:'Lanxi-品宋',serif}
+</style>
+<p class="tag">Song System · 宋体体系定案</p>
+<h1>宋体体系定案</h1>
+<p class="sub">正文 Lanxi-可宋 15px · 副标题 Lanxi-品宋 · 标题 Lanxi-朗宋 / 颜宋 · 静黑超细退役水印</p>
+<div class="rule"></div>
+<h2>落地三处</h2>
+<div class="item"><span class="dot" style="background:#a3763f"></span><span><b>DESIGN.md §0.1</b> —— 注册 Lanxi-可宋、Lanxi-朗宋 两别名，重启 DSH 后自动注入 @font-face，全端可用</span></div>
+<div class="item"><span class="dot" style="background:#a3763f"></span><span><b>warm-minimal.md</b> —— 字体元信息、骨架、点睛技法更新，新增「宋体分工即层次」：可宋正文（稳）、品宋副题（雅）、朗宋/颜宋标题（骨）、静黑超细水印（空）</span></div>
+<div class="item"><span class="dot" style="background:#a3763f"></span><span><b>_FONTS.md</b> —— 补「锁定风格正文宋体例外」注解：其余场景正文仍系统无衬线，克制原则不破</span></div>
+<div class="rule"></div>
+<span class="cta">已推送 · commit 27f2e8a</span>
+<p class="foot">本卡即示范：朗宋题 · 品宋副题 · 可宋正文 · 静黑超细仅作水印 · 重启 DSH 后别名全局生效</p>
+</div>

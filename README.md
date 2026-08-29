@@ -46,12 +46,18 @@ git clone https://github.com/deepseek-ai/deepseek-harness dsh
 # 2. 构建 dsh（v0.1.7 起官方已原生注入 ~/.dsh/AGENTS.md，无需补丁）
 cd dsh && pnpm install --frozen-lockfile && pnpm run build && cd ..
 
+# 2.5 dsh-raw-html 前端渲染补丁（VCP 卡片 HTML 渲染能力；幂等，可重复运行）
+#     必须打在 dsh 源码树的 dist（assemble 会把它复制进绿色包）
+node desktop/plugins/dsh-raw-html/patch/install-all.cjs "$(ls dsh/apps/web/dist/assets/index-*.js | head -1)"
+#     自动探测失败时手动指定 bundle 路径：
+#     node desktop/plugins/dsh-raw-html/patch/install-all.cjs "dsh/apps/web/dist/assets/index-D-eoFxDP.js"
+
 # 3. 桌面端依赖 + 组装资源（拷贝 dsh 代码库 + 独立 Node 运行时）
 cd desktop
 npm install
 DSH_SRC=../dsh node scripts/assemble-resources.cjs
 
-# 4. 一键安装内置插件 + 初始化规则（设置页/版本更新/prompt copy/autofix）
+# 4. 一键安装内置插件 + 初始化规则（设置页/版本更新/prompt copy/autofix/raw-html）
 node scripts/install-plugins.cjs
 
 # 5. 运行（开发）或打包

@@ -12,7 +12,8 @@
       "dsh-prompt-copy": "file:./plugins/dsh-prompt-copy",
       "dsh-skill-manager-ytxue": "https://codeload.github.com/YTxue/dsh-skill-manager-ytxue/tar.gz/f254f3005a446062e312144f27ed0820d38d4654",
       "dsh-update-checker": "file:./plugins/dsh-update-checker",
-      "dshmarket": "^1.22.0"
+      "dshmarket": "^1.22.0",
+      "dsh-raw-html": "file:./plugins/dsh-raw-html"
     },
     "bundles": [
       "@deepseek-ai/dsh-base",
@@ -27,7 +28,8 @@
       "dsh-update-checker",
       "dsh-general-rules",
       "dsh-prompt-copy",
-      "dsh-autofix"
+      "dsh-autofix",
+      "dsh-raw-html"
     ]
   },
   "pluginsDir": "plugins",

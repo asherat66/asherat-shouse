@@ -1,0 +1,69 @@
+{
+  "name": "dsh-raw-html",
+  "version": "0.6.0",
+  "description": "VCP 视觉通感协议规范插件：消息 HTML 渲染开关 + vcp-fast 缓存/增量加速渲染引擎 + 内置 7 款开源精选字体 + 设计规范注入（任何电脑/agent 即插即用）",
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "vcp",
+    "visual-synesthesia",
+    "html",
+    "rendering"
+  ],
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/*.js",
+    "assets",
+    "patch/*.js",
+    "patch/*.cjs",
+    "tools/*.cjs",
+    "tools/*.py",
+    "tests/*.mjs",
+    "tests/*.cjs",
+    "docs",
+    "cordis.patch.yml",
+    "DESIGN.md",
+    "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
+    "VCP-INTERACTIONS.md",
+    "FRAMING.md",
+    "EDITORIAL.md",
+    "BREATH.md",
+    "styles",
+    "examples",
+    "fonts-index.txt"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "react",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "react": "^18.3.1"
+  },
+  "license": "MIT",
+  "optionalDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  }
+}
