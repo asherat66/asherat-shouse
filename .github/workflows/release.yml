@@ -52,7 +52,9 @@ jobs:
       # v0.1.8: dsh-raw-html 前端渲染补丁(VCP 卡片 HTML 渲染能力)——
       # 必须打在 dsh 源码树 dist(assemble 会复制进绿色包);幂等,锚点不匹配安全中止。
       # bundle 有 hash 文件名,先探测再传(超过一个时取第一个)。
+      # 必须用 bash: 默认 pwsh 会展开 $(ls ...) 为其他语义 -> BUNDLE 为空 -> 探测失败。
       - name: Patch web bundle (dsh-raw-html VCP renderer)
+        shell: bash
         run: |
           BUNDLE=$(ls dsh/apps/web/dist/assets/index-*.js | head -1)
           node desktop/plugins/dsh-raw-html/patch/install-all.cjs "$BUNDLE"
